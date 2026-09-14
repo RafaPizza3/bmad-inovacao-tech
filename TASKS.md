@@ -13,11 +13,12 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
 
 ## Fundação
 
-- [ ] **Tarefa 1 — Criar estrutura visual e navegação**
+- [x] **Tarefa 1 — Criar estrutura visual e navegação**
   - Capacidades: CAP-9. Dependências: nenhuma.
   - Criar `index.html` com CSS e JS internos, menu de projetos, navegação Backlog/Quadro/Sprints e área de conteúdo.
   - Aceite: abrir no navegador sem erro; alternar as três telas; indicar a tela selecionada; exibir estados vazios em português; foco visível e estrutura semântica.
   - Verificação: abrir localmente, navegar com Tab e Enter e testar largura de 360 px.
+  - Verificação realizada: sintaxe JavaScript válida e revisão independente do código sem defeitos bloqueantes. Usuário validou a entrega e autorizou continuar (“me parece bom. pode continuar”). Limitação: não houve verificação automatizada em navegador de Tab/Enter e largura de 360 px, pois nenhum navegador estava disponível na sessão; a validação do usuário não detalhou esses testes.
 
 - [ ] **Tarefa 2 — Implementar estado e persistência local**
   - Capacidades: CAP-8. Dependências: 1. Decisão prévia: persistência proposta.
