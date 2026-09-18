@@ -13,23 +13,26 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
 
 ## Fundação
 
-- [ ] **Tarefa 1 — Criar estrutura visual e navegação**
+- [x] **Tarefa 1 — Criar estrutura visual e navegação**
   - Capacidades: CAP-9. Dependências: nenhuma.
   - Criar `index.html` com CSS e JS internos, menu de projetos, navegação Backlog/Quadro/Sprints e área de conteúdo.
   - Aceite: abrir no navegador sem erro; alternar as três telas; indicar a tela selecionada; exibir estados vazios em português; foco visível e estrutura semântica.
   - Verificação: abrir localmente, navegar com Tab e Enter e testar largura de 360 px.
+  - Verificação realizada: sintaxe JavaScript válida e revisão independente do código sem defeitos bloqueantes. Usuário validou a entrega e autorizou continuar (“me parece bom. pode continuar”). Limitação: não houve verificação automatizada em navegador de Tab/Enter e largura de 360 px, pois nenhum navegador estava disponível na sessão; a validação do usuário não detalhou esses testes.
 
-- [ ] **Tarefa 2 — Implementar estado e persistência local**
+- [x] **Tarefa 2 — Implementar estado e persistência local**
   - Capacidades: CAP-8. Dependências: 1. Decisão prévia: persistência proposta.
   - Definir estruturas de projetos, tarefas e sprints, IDs estáveis, versão de dados e funções de leitura/gravação.
   - Aceite: estado válido sobrevive à recarga; armazenamento vazio inicializa sem erro; dados inválidos e falhas de gravação geram mensagem e não sobrescrevem silenciosamente o conteúdo anterior.
   - Verificação: usar o console para salvar e recuperar estado de exemplo, simular JSON inválido e falha de gravação; restaurar o estado de teste ao terminar.
+  - Verificação realizada: JavaScript executado com Node/VM e armazenamento isolado em memória; carga vazia, recarga com projetos/tarefas/sprints, 1.000 IDs distintos, versão inválida, JSON corrompido, falhas de leitura/gravação e mudança externa passaram. Nenhum dado real foi alterado. Revisão independente sem defeitos bloqueantes; operações futuras devem salvar cópias do estado. Objetos programáticos com toJSON personalizado estão fora do fluxo implementado. Limitação: navegador integrado indisponível; localStorage real e apresentação do alerta não foram testados visualmente.
 
-- [ ] **Tarefa 3 — Criar e selecionar projetos**
+- [x] **Tarefa 3 — Criar e selecionar projetos**
   - Capacidades: CAP-1, CAP-8. Dependências: 2. Regras: R1.
   - Criar formulário para nome do projeto, edição do nome e seleção persistente.
   - Aceite: nome vazio ou apenas espaços é rejeitado; projetos têm IDs distintos; renomear preserva ID; recarregar mantém projetos e seleção; ausência de projetos mostra ação para criar o primeiro.
   - Verificação: criar dois projetos, renomear um e alternar seleção antes e depois de recarregar.
+  - Verificação realizada: Node/VM com DOM e armazenamento simulados validou criação de dois projetos com IDs distintos, rejeição de nome vazio/espaços, renomeação preservando ID, nome semelhante a HTML tratado como texto, seleção após duas recargas, cancelamento e retorno de foco, falha de gravação preservando texto/estado e restauração da seleção anterior. Sintaxe JavaScript e git diff --check aprovados. Revisão independente sem defeitos bloqueantes; trocar de projeto fecha o rascunho aberto, comportamento sem exigência de confirmação no escopo atual. Limitação: navegador integrado indisponível; renderização, teclado real e responsividade não foram verificados visualmente.
 
 ## Tarefas e backlog
 
@@ -120,5 +123,5 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
 ## Conferência do planejamento
 
 - Todas as nove capacidades estão vinculadas a tarefas com critérios verificáveis.
-- Dependências apontam somente para tarefas anteriores; nenhuma tarefa de implementação foi executada.
-- Questão pendente: confirmação das regras e decisões propostas na especificação antes de implementar os pontos afetados.
+- Dependências apontam somente para tarefas anteriores; tarefas 1, 2 e 3 concluídas. Tarefas 4–16 permanecem pendentes.
+- Persistência com localStorage e R1 confirmadas pelo usuário em 18/09/2026. As demais regras propostas aguardam confirmação antes das tarefas afetadas.

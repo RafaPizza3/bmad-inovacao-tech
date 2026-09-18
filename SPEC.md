@@ -6,7 +6,7 @@ sources: []
 
 # Gerenciador individual de tarefas
 
-Status: planejamento inicial; regras propostas abaixo aguardam resposta antes da implementação afetada.
+Status: tarefas 1–3 autorizadas; persistência com localStorage e regra R1 confirmadas pelo usuário em 18/09/2026. As demais regras aguardam confirmação antes das tarefas afetadas.
 
 ## Por quê
 
@@ -69,6 +69,9 @@ Uma pessoa cria um projeto e tarefas, organiza o backlog, planeja e inicia uma s
 - As regras R1–R6 e as decisões técnicas propostas atendem à primeira versão? Ajustar os documentos antes de implementar qualquer ponto não aprovado.
 
 ## Registro do planejamento
+
+- Confirmado em 18/09/2026: salvar neste navegador com localStorage e permitir vários projetos, com no máximo uma sprint ativa por projeto. Implementar as tarefas 2 e 3 em commits separados, preservando a tarefa 1 já concluída.
+- Implementação das tarefas 2–3: estado versionado e validado, IDs estáveis, gravação antes de atualizar o estado em memória e mensagens de erro em português; formulário de criação/renomeação e seleção persistente em `index.html`. Verificação sem criar arquivos auxiliares.
 
 - Pedido: gerenciador no estilo Jira, com HTML, CSS e JavaScript; criar todas as tarefas e orientar pelo BMAD.
 - Confirmado pelo usuário: uso individual, backlog e sprints na primeira versão, criação de `SPEC.md` e `TASKS.md`.

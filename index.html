@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Backlog · Gerenciador individual</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #24324a; background: #f5f7fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button, select, input { font: inherit; }
+    :focus-visible { outline: 3px solid #125acd; outline-offset: 4px; }
+    .skip { position: fixed; top: 12px; left: 12px; padding: 12px; background: white; z-index: 2; transform: translateY(-160%); }
+    .skip:focus { transform: translateY(0); }
+    .app { min-height: 100vh; display: grid; grid-template-columns: 248px minmax(0, 1fr); }
+    aside { background: white; border-right: 1px solid #dce2ed; padding: 32px 20px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 750; margin-bottom: 36px; }
+    .mark { display: grid; place-items: center; background: #245bc5; color: white; border-radius: 10px; width: 36px; height: 36px; }
+    label { display: block; font-size: 13px; font-weight: 650; margin-bottom: 8px; }
+    select { width: 100%; padding: 10px; border: 1px solid #cbd3e1; border-radius: 7px; background: #f5f7fb; color: #536078; }
+    .project-note { color: #536078; font-size: 12px; line-height: 1.6; margin: 10px 0 28px; }
+    nav { display: grid; gap: 8px; }
+    nav button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px; text-align: left; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #43516a; cursor: pointer; }
+    nav button:hover { background: #f0f4fa; }
+    nav button[aria-current="page"] { background: #eaf0ff; color: #194cae; border-color: #c7d6fa; font-weight: 700; }
+    .nav-icon { width: 22px; text-align: center; font-size: 20px; }
+    main { min-width: 0; padding: 48px clamp(20px, 5vw, 72px); }
+    .eyebrow { margin: 0 0 12px; color: #536078; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { font-size: clamp(28px, 4vw, 36px); margin: 0 0 10px; letter-spacing: -.035em; }
+    .intro { color: #536078; line-height: 1.65; margin: 0; max-width: 620px; }
+    .empty { margin-top: 32px; min-height: 350px; background: white; border: 1px solid #dce2ed; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 32px 24px; }
+    .empty-icon { width: 64px; height: 64px; border-radius: 18px; background: #eef3ff; color: #245bc5; display: grid; place-items: center; font-size: 30px; margin-bottom: 20px; }
+    h2 { font-size: 20px; margin: 0 0 12px; }
+    .empty p { max-width: 400px; margin: 0; color: #536078; line-height: 1.7; }
+    .footer { font-size: 12px; color: #536078; margin-top: 22px; }
+    .storage-error { padding: 16px; border: 1px solid #b42318; border-radius: 8px; background: #fff2f0; color: #8a1c13; line-height: 1.5; }
+    .project-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .action { padding: 10px 12px; border: 1px solid #b9c8e4; border-radius: 7px; background: white; color: #194cae; cursor: pointer; }
+    .action:hover { background: #eaf0ff; }
+    .primary { background: #245bc5; color: white; border-color: #245bc5; }
+    .primary:hover { background: #194cae; }
+    button:disabled { cursor: not-allowed; opacity: .6; }
+    .project-form { margin-bottom: 24px; }
+    .project-form input { width: 100%; min-width: 0; padding: 10px; border: 1px solid #9baac3; border-radius: 7px; }
+    .project-form .project-actions { margin: 12px 0 0; }
+    .field-error { color: #8a1c13; font-size: 13px; line-height: 1.5; }
+    .project-status { font-size: 13px; overflow-wrap: anywhere; }
+    .eyebrow { overflow-wrap: anywhere; }
+    #primeiro-projeto { margin-bottom: 24px; }
+    [hidden] { display: none !important; }
+    @media (max-width: 680px) {
+      .app { grid-template-columns: minmax(0, 1fr); }
+      aside { padding: 20px; border-right: 0; border-bottom: 1px solid #dce2ed; }
+      .brand { margin-bottom: 20px; }
+      .project-note { margin-bottom: 18px; }
+      nav { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+      nav button { justify-content: center; padding: 12px 4px; gap: 5px; font-size: 14px; }
+      main { padding: 28px 20px; }
+      .empty { min-height: 290px; margin-top: 24px; padding: 24px 18px; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#conteudo">Pular para o conteúdo</a>
+  <div class="app">
+    <aside aria-label="Projetos e navegação">
+      <div class="brand"><span class="mark" aria-hidden="true">✓</span> Meu trabalho</div>
+      <label for="projetos">Projeto</label>
+      <select id="projetos" disabled aria-describedby="projetos-ajuda"><option>Nenhum projeto</option></select>
+      <p id="projetos-ajuda" class="project-note">Você ainda não tem projetos.</p>
+      <div class="project-actions">
+        <button class="action" id="novo-projeto" type="button">Novo projeto</button>
+        <button class="action" id="renomear-projeto" type="button" disabled>Renomear</button>
+      </div>
+      <form id="form-projeto" class="project-form" hidden novalidate>
+        <label for="nome-projeto">Nome do projeto</label>
+        <input id="nome-projeto" name="nome" required aria-describedby="erro-projeto" autocomplete="off">
+        <p id="erro-projeto" class="field-error" hidden></p>
+        <div class="project-actions">
+          <button class="action primary" type="submit">Salvar</button>
+          <button class="action" id="cancelar-projeto" type="button">Cancelar</button>
+        </div>
+      </form>
+      <p id="status-projeto" class="project-status" role="status"></p>
+      <nav aria-label="Áreas do projeto">
+        <button type="button" data-view="backlog" aria-current="page" aria-controls="backlog"><span class="nav-icon" aria-hidden="true">≡</span>Backlog</button>
+        <button type="button" data-view="quadro" aria-controls="quadro"><span class="nav-icon" aria-hidden="true">▥</span>Quadro</button>
+        <button type="button" data-view="sprints" aria-controls="sprints"><span class="nav-icon" aria-hidden="true">↻</span>Sprints</button>
+      </nav>
+    </aside>
+    <main id="conteudo" tabindex="-1">
+      <p id="aviso-armazenamento" class="storage-error" role="alert" hidden></p>
+      <p class="eyebrow">Seu espaço de trabalho</p>
+      <button class="action primary" id="primeiro-projeto" type="button">Criar primeiro projeto</button>
+      <section id="backlog" aria-labelledby="titulo-backlog">
+        <h1 id="titulo-backlog">Backlog</h1>
+        <p class="intro">Organize suas demandas e prepare o próximo passo.</p>
+        <div class="empty"><span class="empty-icon" aria-hidden="true">≡</span><h2>Seu backlog começa aqui</h2><p>Nenhuma tarefa por enquanto. As tarefas do projeto aparecerão aqui para você organizar suas prioridades.</p></div>
+      </section>
+      <section id="quadro" aria-labelledby="titulo-quadro" hidden>
+        <h1 id="titulo-quadro">Quadro</h1>
+        <p class="intro">Acompanhe o trabalho da sprint, do início à conclusão.</p>
+        <div class="empty"><span class="empty-icon" aria-hidden="true">▥</span><h2>Nenhuma sprint ativa</h2><p>Quando uma sprint estiver ativa, suas tarefas aparecerão neste quadro para acompanhar o andamento.</p></div>
+      </section>
+      <section id="sprints" aria-labelledby="titulo-sprints" hidden>
+        <h1 id="titulo-sprints">Sprints</h1>
+        <p class="intro">Reserve tempo e dê um objetivo ao seu próximo ciclo.</p>
+        <div class="empty"><span class="empty-icon" aria-hidden="true">↻</span><h2>Nenhuma sprint planejada</h2><p>As sprints do projeto aparecerão aqui, com seus objetivos e períodos de trabalho.</p></div>
+      </section>
+      <p class="footer">Gerenciador individual de tarefas</p>
+      <p id="aviso-navegacao" role="status" style="position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%)"></p>
+    </main>
+  </div>
+  <script>
+    'use strict';
+    const STORAGE_KEY = 'meu-trabalho.estado';
+    const DATA_VERSION = 1;
+    let storageBlocked = false;
+    let persistedValue = null;
+    const emptyState = () => ({ version: DATA_VERSION, projects: [], tasks: [], sprints: [], selectedProjectId: null });
+    const isText = (value) => typeof value === 'string' && value.trim().length > 0;
+    const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+    function validDate(value) {
+      if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+      const date = new Date(value + 'T00:00:00Z');
+      return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+    }
+    function validateState(value) {
+      if (!isRecord(value) || value.version !== DATA_VERSION ||
+          !['projects', 'tasks', 'sprints'].every((key) => Array.isArray(value[key]))) return false;
+      const ids = new Set();
+      for (const entity of [...value.projects, ...value.tasks, ...value.sprints]) {
+        if (!isRecord(entity) || !isText(entity.id) || ids.has(entity.id)) return false;
+        ids.add(entity.id);
+      }
+      const projectIds = new Set(value.projects.map((project) => project.id));
+      if (!value.projects.every((project) => isText(project.name))) return false;
+      if (value.selectedProjectId !== null && !projectIds.has(value.selectedProjectId)) return false;
+      const activeProjects = new Set();
+      for (const sprint of value.sprints) {
+        if (!projectIds.has(sprint.projectId) || !isText(sprint.name) || typeof sprint.goal !== 'string' ||
+            !['planned', 'active', 'closed'].includes(sprint.status) ||
+            !validDate(sprint.startDate) || !validDate(sprint.endDate) || sprint.endDate < sprint.startDate) return false;
+        if (sprint.status === 'active') {
+          if (activeProjects.has(sprint.projectId)) return false;
+          activeProjects.add(sprint.projectId);
+        }
+      }
+      for (const task of value.tasks) {
+        if (!projectIds.has(task.projectId) || !isText(task.title) || typeof task.description !== 'string' ||
+            !['low', 'medium', 'high'].includes(task.priority) || !['todo', 'doing', 'done'].includes(task.status) ||
+            !(task.dueDate === null || validDate(task.dueDate)) ||
+            !Number.isSafeInteger(task.order) || task.order < 0) return false;
+        if (task.sprintId !== null && !value.sprints.some((sprint) =>
+          sprint.id === task.sprintId && sprint.projectId === task.projectId)) return false;
+      }
+      return true;
+    }
+    function storageMessage(message) {
+      const notice = document.getElementById('aviso-armazenamento');
+      notice.textContent = message;
+      notice.hidden = !message;
+    }
+    function loadState() {
+      try {
+        persistedValue = localStorage.getItem(STORAGE_KEY);
+        const loaded = persistedValue === null ? emptyState() : JSON.parse(persistedValue);
+        if (!validateState(loaded)) throw new Error('Formato inválido');
+        storageBlocked = false;
+        storageMessage('');
+        return loaded;
+      } catch (error) {
+        storageBlocked = true;
+        storageMessage('Não foi possível ler os dados salvos. O conteúdo existente foi preservado e novas gravações estão bloqueadas. Verifique o armazenamento do navegador e recarregue a página.');
+        return emptyState();
+      }
+    }
+    let state = loadState();
+    function saveState(nextState) {
+      if (storageBlocked) {
+        storageMessage('Gravação bloqueada para preservar os dados existentes. Verifique o armazenamento e recarregue a página.');
+        return false;
+      }
+      if (!validateState(nextState)) {
+        storageMessage('Não foi possível salvar: os dados são inválidos. A versão anterior foi preservada.');
+        return false;
+      }
+      try {
+        if (localStorage.getItem(STORAGE_KEY) !== persistedValue) {
+          storageBlocked = true;
+          storageMessage('Os dados salvos mudaram em outra janela. Recarregue a página antes de continuar; nenhuma alteração foi gravada.');
+          return false;
+        }
+        const serialized = JSON.stringify(nextState);
+        localStorage.setItem(STORAGE_KEY, serialized);
+        persistedValue = serialized;
+        state = JSON.parse(serialized);
+        storageMessage('');
+        return true;
+      } catch (error) {
+        storageMessage('Não foi possível salvar no navegador. A alteração não foi aplicada. Verifique o espaço e a permissão de armazenamento e tente novamente.');
+        return false;
+      }
+    }
+    function createId() {
+      const usedIds = new Set([...state.projects, ...state.tasks, ...state.sprints].map((entity) => entity.id));
+      let id;
+      do {
+        const bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+        id = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+      } while (usedIds.has(id));
+      return id;
+    }
+    const projectSelect = document.getElementById('projetos');
+    const projectForm = document.getElementById('form-projeto');
+    const projectInput = document.getElementById('nome-projeto');
+    const projectError = document.getElementById('erro-projeto');
+    const renameButton = document.getElementById('renomear-projeto');
+    const newButton = document.getElementById('novo-projeto');
+    const firstButton = document.getElementById('primeiro-projeto');
+    let editingProjectId = null;
+    let projectTrigger = newButton;
+    function renderProjects() {
+      projectSelect.replaceChildren();
+      if (state.selectedProjectId === null) {
+        projectSelect.add(new Option(state.projects.length ? 'Selecione um projeto' : 'Nenhum projeto', ''));
+      }
+      for (const project of state.projects) projectSelect.add(new Option(project.name, project.id));
+      projectSelect.value = state.selectedProjectId ?? '';
+      projectSelect.disabled = storageBlocked || state.projects.length === 0;
+      renameButton.disabled = storageBlocked || state.selectedProjectId === null;
+      newButton.disabled = storageBlocked;
+      firstButton.disabled = storageBlocked;
+      firstButton.hidden = state.projects.length > 0;
+      document.getElementById('projetos-ajuda').textContent = state.projects.length
+        ? 'Os projetos ficam salvos neste navegador.' : 'Você ainda não tem projetos.';
+      const selected = state.projects.find((project) => project.id === state.selectedProjectId);
+      document.querySelector('.eyebrow').textContent = selected ? selected.name : 'Seu espaço de trabalho';
+    }
+    function clearProjectError() {
+      projectError.hidden = true;
+      projectError.textContent = '';
+      projectInput.removeAttribute('aria-invalid');
+    }
+    function openProjectForm(projectId, trigger) {
+      editingProjectId = projectId;
+      projectTrigger = trigger;
+      projectInput.value = projectId === null ? '' : state.projects.find((project) => project.id === projectId).name;
+      clearProjectError();
+      document.getElementById('status-projeto').textContent = '';
+      projectForm.hidden = false;
+      projectInput.focus();
+    }
+    function closeProjectForm() {
+      projectForm.hidden = true;
+      editingProjectId = null;
+      clearProjectError();
+      (projectTrigger.hidden || projectTrigger.disabled ? newButton : projectTrigger).focus();
+    }
+    newButton.addEventListener('click', () => openProjectForm(null, newButton));
+    firstButton.addEventListener('click', () => openProjectForm(null, firstButton));
+    renameButton.addEventListener('click', () => openProjectForm(state.selectedProjectId, renameButton));
+    document.getElementById('cancelar-projeto').addEventListener('click', closeProjectForm);
+    projectInput.addEventListener('input', clearProjectError);
+    projectForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const name = projectInput.value.trim();
+      if (!name) {
+        projectError.textContent = 'Informe um nome para o projeto.';
+        projectError.hidden = false;
+        projectInput.setAttribute('aria-invalid', 'true');
+        projectInput.focus();
+        return;
+      }
+      const renaming = editingProjectId !== null;
+      const id = renaming ? editingProjectId : createId();
+      const projects = renaming
+        ? state.projects.map((project) => project.id === id ? { ...project, name } : project)
+        : [...state.projects, { id, name }];
+      if (!saveState({ ...state, projects, selectedProjectId: renaming ? state.selectedProjectId : id })) return;
+      renderProjects();
+      closeProjectForm();
+      document.getElementById('status-projeto').textContent = renaming ? 'Projeto renomeado.' : 'Projeto criado e selecionado.';
+    });
+    projectSelect.addEventListener('change', () => {
+      const selectedProjectId = projectSelect.value || null;
+      if (saveState({ ...state, selectedProjectId })) {
+        projectForm.hidden = true;
+        editingProjectId = null;
+        clearProjectError();
+        document.getElementById('status-projeto').textContent = 'Seleção de projeto salva.';
+      }
+      renderProjects();
+    });
+    renderProjects();
+    const navigation = document.querySelector('nav');
+    const screens = document.querySelectorAll('main > section');
+    navigation.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-view]');
+      if (!button) return;
+      for (const screen of screens) screen.hidden = screen.id !== button.dataset.view;
+      for (const item of navigation.querySelectorAll('button')) item.removeAttribute('aria-current');
+      button.setAttribute('aria-current', 'page');
+      const title = document.getElementById(button.dataset.view).querySelector('h1').textContent;
+      document.title = title + ' · Gerenciador individual';
+      document.getElementById('aviso-navegacao').textContent = 'Tela ' + title + ' selecionada.';
+    });
+  </script>
+</body>
+</html>
