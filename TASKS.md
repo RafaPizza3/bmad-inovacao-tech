@@ -27,11 +27,12 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
   - Verificação: usar o console para salvar e recuperar estado de exemplo, simular JSON inválido e falha de gravação; restaurar o estado de teste ao terminar.
   - Verificação realizada: JavaScript executado com Node/VM e armazenamento isolado em memória; carga vazia, recarga com projetos/tarefas/sprints, 1.000 IDs distintos, versão inválida, JSON corrompido, falhas de leitura/gravação e mudança externa passaram. Nenhum dado real foi alterado. Revisão independente sem defeitos bloqueantes; operações futuras devem salvar cópias do estado. Objetos programáticos com toJSON personalizado estão fora do fluxo implementado. Limitação: navegador integrado indisponível; localStorage real e apresentação do alerta não foram testados visualmente.
 
-- [ ] **Tarefa 3 — Criar e selecionar projetos**
+- [x] **Tarefa 3 — Criar e selecionar projetos**
   - Capacidades: CAP-1, CAP-8. Dependências: 2. Regras: R1.
   - Criar formulário para nome do projeto, edição do nome e seleção persistente.
   - Aceite: nome vazio ou apenas espaços é rejeitado; projetos têm IDs distintos; renomear preserva ID; recarregar mantém projetos e seleção; ausência de projetos mostra ação para criar o primeiro.
   - Verificação: criar dois projetos, renomear um e alternar seleção antes e depois de recarregar.
+  - Verificação realizada: Node/VM com DOM e armazenamento simulados validou criação de dois projetos com IDs distintos, rejeição de nome vazio/espaços, renomeação preservando ID, nome semelhante a HTML tratado como texto, seleção após duas recargas, cancelamento e retorno de foco, falha de gravação preservando texto/estado e restauração da seleção anterior. Sintaxe JavaScript e git diff --check aprovados. Revisão independente sem defeitos bloqueantes; trocar de projeto fecha o rascunho aberto, comportamento sem exigência de confirmação no escopo atual. Limitação: navegador integrado indisponível; renderização, teclado real e responsividade não foram verificados visualmente.
 
 ## Tarefas e backlog
 
@@ -122,5 +123,5 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
 ## Conferência do planejamento
 
 - Todas as nove capacidades estão vinculadas a tarefas com critérios verificáveis.
-- Dependências apontam somente para tarefas anteriores; nenhuma tarefa de implementação foi executada.
-- Questão pendente: confirmação das regras e decisões propostas na especificação antes de implementar os pontos afetados.
+- Dependências apontam somente para tarefas anteriores; tarefas 1, 2 e 3 concluídas. Tarefas 4–16 permanecem pendentes.
+- Persistência com localStorage e R1 confirmadas pelo usuário em 18/09/2026. As demais regras propostas aguardam confirmação antes das tarefas afetadas.

@@ -8,7 +8,7 @@
     :root { color-scheme: light; font-family: system-ui, sans-serif; color: #24324a; background: #f5f7fb; }
     * { box-sizing: border-box; }
     body { margin: 0; }
-    button, select { font: inherit; }
+    button, select, input { font: inherit; }
     :focus-visible { outline: 3px solid #125acd; outline-offset: 4px; }
     .skip { position: fixed; top: 12px; left: 12px; padding: 12px; background: white; z-index: 2; transform: translateY(-160%); }
     .skip:focus { transform: translateY(0); }
@@ -34,6 +34,19 @@
     .empty p { max-width: 400px; margin: 0; color: #536078; line-height: 1.7; }
     .footer { font-size: 12px; color: #536078; margin-top: 22px; }
     .storage-error { padding: 16px; border: 1px solid #b42318; border-radius: 8px; background: #fff2f0; color: #8a1c13; line-height: 1.5; }
+    .project-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .action { padding: 10px 12px; border: 1px solid #b9c8e4; border-radius: 7px; background: white; color: #194cae; cursor: pointer; }
+    .action:hover { background: #eaf0ff; }
+    .primary { background: #245bc5; color: white; border-color: #245bc5; }
+    .primary:hover { background: #194cae; }
+    button:disabled { cursor: not-allowed; opacity: .6; }
+    .project-form { margin-bottom: 24px; }
+    .project-form input { width: 100%; min-width: 0; padding: 10px; border: 1px solid #9baac3; border-radius: 7px; }
+    .project-form .project-actions { margin: 12px 0 0; }
+    .field-error { color: #8a1c13; font-size: 13px; line-height: 1.5; }
+    .project-status { font-size: 13px; overflow-wrap: anywhere; }
+    .eyebrow { overflow-wrap: anywhere; }
+    #primeiro-projeto { margin-bottom: 24px; }
     [hidden] { display: none !important; }
     @media (max-width: 680px) {
       .app { grid-template-columns: minmax(0, 1fr); }
@@ -55,6 +68,20 @@
       <label for="projetos">Projeto</label>
       <select id="projetos" disabled aria-describedby="projetos-ajuda"><option>Nenhum projeto</option></select>
       <p id="projetos-ajuda" class="project-note">Você ainda não tem projetos.</p>
+      <div class="project-actions">
+        <button class="action" id="novo-projeto" type="button">Novo projeto</button>
+        <button class="action" id="renomear-projeto" type="button" disabled>Renomear</button>
+      </div>
+      <form id="form-projeto" class="project-form" hidden novalidate>
+        <label for="nome-projeto">Nome do projeto</label>
+        <input id="nome-projeto" name="nome" required aria-describedby="erro-projeto" autocomplete="off">
+        <p id="erro-projeto" class="field-error" hidden></p>
+        <div class="project-actions">
+          <button class="action primary" type="submit">Salvar</button>
+          <button class="action" id="cancelar-projeto" type="button">Cancelar</button>
+        </div>
+      </form>
+      <p id="status-projeto" class="project-status" role="status"></p>
       <nav aria-label="Áreas do projeto">
         <button type="button" data-view="backlog" aria-current="page" aria-controls="backlog"><span class="nav-icon" aria-hidden="true">≡</span>Backlog</button>
         <button type="button" data-view="quadro" aria-controls="quadro"><span class="nav-icon" aria-hidden="true">▥</span>Quadro</button>
@@ -64,6 +91,7 @@
     <main id="conteudo" tabindex="-1">
       <p id="aviso-armazenamento" class="storage-error" role="alert" hidden></p>
       <p class="eyebrow">Seu espaço de trabalho</p>
+      <button class="action primary" id="primeiro-projeto" type="button">Criar primeiro projeto</button>
       <section id="backlog" aria-labelledby="titulo-backlog">
         <h1 id="titulo-backlog">Backlog</h1>
         <p class="intro">Organize suas demandas e prepare o próximo passo.</p>
@@ -184,6 +212,88 @@
       } while (usedIds.has(id));
       return id;
     }
+    const projectSelect = document.getElementById('projetos');
+    const projectForm = document.getElementById('form-projeto');
+    const projectInput = document.getElementById('nome-projeto');
+    const projectError = document.getElementById('erro-projeto');
+    const renameButton = document.getElementById('renomear-projeto');
+    const newButton = document.getElementById('novo-projeto');
+    const firstButton = document.getElementById('primeiro-projeto');
+    let editingProjectId = null;
+    let projectTrigger = newButton;
+    function renderProjects() {
+      projectSelect.replaceChildren();
+      if (state.selectedProjectId === null) {
+        projectSelect.add(new Option(state.projects.length ? 'Selecione um projeto' : 'Nenhum projeto', ''));
+      }
+      for (const project of state.projects) projectSelect.add(new Option(project.name, project.id));
+      projectSelect.value = state.selectedProjectId ?? '';
+      projectSelect.disabled = storageBlocked || state.projects.length === 0;
+      renameButton.disabled = storageBlocked || state.selectedProjectId === null;
+      newButton.disabled = storageBlocked;
+      firstButton.disabled = storageBlocked;
+      firstButton.hidden = state.projects.length > 0;
+      document.getElementById('projetos-ajuda').textContent = state.projects.length
+        ? 'Os projetos ficam salvos neste navegador.' : 'Você ainda não tem projetos.';
+      const selected = state.projects.find((project) => project.id === state.selectedProjectId);
+      document.querySelector('.eyebrow').textContent = selected ? selected.name : 'Seu espaço de trabalho';
+    }
+    function clearProjectError() {
+      projectError.hidden = true;
+      projectError.textContent = '';
+      projectInput.removeAttribute('aria-invalid');
+    }
+    function openProjectForm(projectId, trigger) {
+      editingProjectId = projectId;
+      projectTrigger = trigger;
+      projectInput.value = projectId === null ? '' : state.projects.find((project) => project.id === projectId).name;
+      clearProjectError();
+      document.getElementById('status-projeto').textContent = '';
+      projectForm.hidden = false;
+      projectInput.focus();
+    }
+    function closeProjectForm() {
+      projectForm.hidden = true;
+      editingProjectId = null;
+      clearProjectError();
+      (projectTrigger.hidden || projectTrigger.disabled ? newButton : projectTrigger).focus();
+    }
+    newButton.addEventListener('click', () => openProjectForm(null, newButton));
+    firstButton.addEventListener('click', () => openProjectForm(null, firstButton));
+    renameButton.addEventListener('click', () => openProjectForm(state.selectedProjectId, renameButton));
+    document.getElementById('cancelar-projeto').addEventListener('click', closeProjectForm);
+    projectInput.addEventListener('input', clearProjectError);
+    projectForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const name = projectInput.value.trim();
+      if (!name) {
+        projectError.textContent = 'Informe um nome para o projeto.';
+        projectError.hidden = false;
+        projectInput.setAttribute('aria-invalid', 'true');
+        projectInput.focus();
+        return;
+      }
+      const renaming = editingProjectId !== null;
+      const id = renaming ? editingProjectId : createId();
+      const projects = renaming
+        ? state.projects.map((project) => project.id === id ? { ...project, name } : project)
+        : [...state.projects, { id, name }];
+      if (!saveState({ ...state, projects, selectedProjectId: renaming ? state.selectedProjectId : id })) return;
+      renderProjects();
+      closeProjectForm();
+      document.getElementById('status-projeto').textContent = renaming ? 'Projeto renomeado.' : 'Projeto criado e selecionado.';
+    });
+    projectSelect.addEventListener('change', () => {
+      const selectedProjectId = projectSelect.value || null;
+      if (saveState({ ...state, selectedProjectId })) {
+        projectForm.hidden = true;
+        editingProjectId = null;
+        clearProjectError();
+        document.getElementById('status-projeto').textContent = 'Seleção de projeto salva.';
+      }
+      renderProjects();
+    });
+    renderProjects();
     const navigation = document.querySelector('nav');
     const screens = document.querySelectorAll('main > section');
     navigation.addEventListener('click', (event) => {
