@@ -20,11 +20,12 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
   - Verificação: abrir localmente, navegar com Tab e Enter e testar largura de 360 px.
   - Verificação realizada: sintaxe JavaScript válida e revisão independente do código sem defeitos bloqueantes. Usuário validou a entrega e autorizou continuar (“me parece bom. pode continuar”). Limitação: não houve verificação automatizada em navegador de Tab/Enter e largura de 360 px, pois nenhum navegador estava disponível na sessão; a validação do usuário não detalhou esses testes.
 
-- [ ] **Tarefa 2 — Implementar estado e persistência local**
+- [x] **Tarefa 2 — Implementar estado e persistência local**
   - Capacidades: CAP-8. Dependências: 1. Decisão prévia: persistência proposta.
   - Definir estruturas de projetos, tarefas e sprints, IDs estáveis, versão de dados e funções de leitura/gravação.
   - Aceite: estado válido sobrevive à recarga; armazenamento vazio inicializa sem erro; dados inválidos e falhas de gravação geram mensagem e não sobrescrevem silenciosamente o conteúdo anterior.
   - Verificação: usar o console para salvar e recuperar estado de exemplo, simular JSON inválido e falha de gravação; restaurar o estado de teste ao terminar.
+  - Verificação realizada: JavaScript executado com Node/VM e armazenamento isolado em memória; carga vazia, recarga com projetos/tarefas/sprints, 1.000 IDs distintos, versão inválida, JSON corrompido, falhas de leitura/gravação e mudança externa passaram. Nenhum dado real foi alterado. Revisão independente sem defeitos bloqueantes; operações futuras devem salvar cópias do estado. Objetos programáticos com toJSON personalizado estão fora do fluxo implementado. Limitação: navegador integrado indisponível; localStorage real e apresentação do alerta não foram testados visualmente.
 
 - [ ] **Tarefa 3 — Criar e selecionar projetos**
   - Capacidades: CAP-1, CAP-8. Dependências: 2. Regras: R1.
