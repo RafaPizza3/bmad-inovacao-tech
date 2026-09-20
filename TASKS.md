@@ -50,11 +50,12 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
   - Verificação: editar cada campo, cancelar outra edição e comparar os dados após recarregar.
   - Verificação realizada: o formulário reutilizado mostra ID, projeto e vínculo de sprint só como texto; Salvar copia título, descrição, prioridade e prazo sem mudar `id`, `projectId`, `sprintId`, `status` nem `order`; Cancelar fecha sem `saveState`; título vazio continua rejeitado. Tarefas concluídas de sprint encerrada não abrem edição (R6). Limitação: navegador integrado indisponível; persistência após recarga e o cancelamento visual não foram exercidos na interface.
 
-- [ ] **Tarefa 6 — Excluir tarefas com confirmação**
+- [x] **Tarefa 6 — Excluir tarefas com confirmação**
   - Capacidades: CAP-2, CAP-8. Dependências: 5. Regras: R6.
   - Permitir exclusão identificando a tarefa na confirmação; centralizar a remoção para não deixar referências inválidas.
   - Aceite: cancelar não altera o estado; confirmar remove somente a tarefa indicada; contagens e listas se atualizam; exclusão persiste.
   - Verificação: cancelar e confirmar exclusões em um projeto com várias tarefas.
+  - Verificação realizada: a ação Excluir identifica a tarefa por ID e título em `window.confirm`; cancelamento não chama `saveState`; confirmação remove apenas o ID indicado pelo `deleteTask`, atualiza a lista e persiste a alteração; falhas de gravação preservam o estado anterior. Sintaxe JavaScript e `git diff --check` aprovados. Limitação: navegador integrado indisponível; confirmação, foco e persistência após recarga não foram exercidos visualmente.
 
 - [ ] **Tarefa 7 — Ordenar o backlog manualmente**
   - Capacidades: CAP-3, CAP-9. Dependências: 4. Regras: R2, R7.

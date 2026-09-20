@@ -427,6 +427,21 @@
         field.focus();
       }
     }
+    function deleteTask(taskId) {
+      const task = state.tasks.find((item) => item.id === taskId);
+      if (!task) {
+        taskStatus.textContent = 'A tarefa não está mais disponível.';
+        return;
+      }
+      const confirmed = window.confirm('Excluir a tarefa ' + task.id + ' — ' + task.title + '?');
+      if (!confirmed) return;
+      const tasks = state.tasks.filter((item) => item.id !== taskId);
+      if (!saveState(copyState({ tasks }))) return;
+      if (editingTaskId === taskId) closeTaskForm({ restoreFocus: false });
+      renderBacklog();
+      taskStatus.textContent = 'Tarefa ' + task.id + ' excluída.';
+      newTaskButton.focus();
+    }
     function renderBacklog() {
       const hasProject = state.selectedProjectId !== null;
       newTaskButton.disabled = storageBlocked || !hasProject;
@@ -466,6 +481,13 @@
           openTaskForm(task.id, detailsButton);
         });
         actions.append(detailsButton);
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'action';
+        deleteButton.type = 'button';
+        deleteButton.textContent = 'Excluir';
+        deleteButton.disabled = storageBlocked;
+        deleteButton.addEventListener('click', () => deleteTask(task.id));
+        actions.append(deleteButton);
         item.append(id, title, meta, description, actions);
         taskList.append(item);
       }
