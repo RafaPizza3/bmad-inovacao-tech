@@ -47,6 +47,17 @@
     .project-status { font-size: 13px; overflow-wrap: anywhere; }
     .eyebrow { overflow-wrap: anywhere; }
     #primeiro-projeto { margin-bottom: 24px; }
+    .task-form, .task-list, .task-card { background: white; border: 1px solid #dce2ed; border-radius: 14px; }
+    .task-form, .task-card { padding: 20px; }
+    .task-form { display: grid; gap: 14px; }
+    textarea, .task-form input, .task-form select { width: 100%; min-width: 0; padding: 10px; border: 1px solid #9baac3; border-radius: 7px; background: white; }
+    textarea { min-height: 96px; resize: vertical; }
+    .task-list { list-style: none; margin: 0; padding: 12px; display: grid; gap: 10px; }
+    .task-card { display: grid; gap: 8px; }
+    .task-id { margin: 0; font-family: ui-monospace, monospace; font-size: 12px; color: #536078; overflow-wrap: anywhere; }
+    .task-title { margin: 0; font-size: 18px; overflow-wrap: anywhere; }
+    .task-meta { margin: 0; color: #536078; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+    .task-desc { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
     [hidden] { display: none !important; }
     @media (max-width: 680px) {
       .app { grid-template-columns: minmax(0, 1fr); }
@@ -95,7 +106,39 @@
       <section id="backlog" aria-labelledby="titulo-backlog">
         <h1 id="titulo-backlog">Backlog</h1>
         <p class="intro">Organize suas demandas e prepare o próximo passo.</p>
-        <div class="empty"><span class="empty-icon" aria-hidden="true">≡</span><h2>Seu backlog começa aqui</h2><p>Nenhuma tarefa por enquanto. As tarefas do projeto aparecerão aqui para você organizar suas prioridades.</p></div>
+        <div class="project-actions">
+          <button class="action primary" id="nova-tarefa" type="button">Nova tarefa</button>
+        </div>
+        <form id="form-tarefa" class="task-form" hidden novalidate>
+          <div>
+            <label for="titulo-tarefa">Título</label>
+            <input id="titulo-tarefa" name="titulo" required autocomplete="off" aria-describedby="erro-tarefa">
+          </div>
+          <div>
+            <label for="descricao-tarefa">Descrição (opcional)</label>
+            <textarea id="descricao-tarefa" name="descricao"></textarea>
+          </div>
+          <div>
+            <label for="prioridade-tarefa">Prioridade</label>
+            <select id="prioridade-tarefa" name="prioridade">
+              <option value="low">Baixa</option>
+              <option value="medium" selected>Média</option>
+              <option value="high">Alta</option>
+            </select>
+          </div>
+          <div>
+            <label for="prazo-tarefa">Prazo (opcional)</label>
+            <input id="prazo-tarefa" name="prazo" type="date">
+          </div>
+          <p id="erro-tarefa" class="field-error" hidden></p>
+          <div class="project-actions">
+            <button class="action primary" type="submit">Criar tarefa</button>
+            <button class="action" id="cancelar-tarefa" type="button">Cancelar</button>
+          </div>
+        </form>
+        <p id="status-tarefa" class="project-status" role="status"></p>
+        <ul id="lista-backlog" class="task-list" hidden></ul>
+        <div class="empty" id="vazio-backlog"><span class="empty-icon" aria-hidden="true">≡</span><h2 id="titulo-vazio-backlog">Seu backlog começa aqui</h2><p id="texto-vazio-backlog">Nenhuma tarefa por enquanto. As tarefas do projeto aparecerão aqui para você organizar suas prioridades.</p></div>
       </section>
       <section id="quadro" aria-labelledby="titulo-quadro" hidden>
         <h1 id="titulo-quadro">Quadro</h1>
@@ -202,15 +245,31 @@
         return false;
       }
     }
-    function createId() {
+    function createId(prefix) {
       const usedIds = new Set([...state.projects, ...state.tasks, ...state.sprints].map((entity) => entity.id));
       let id;
       do {
-        const bytes = new Uint8Array(16);
+        const bytes = new Uint8Array(prefix ? 3 : 16);
         crypto.getRandomValues(bytes);
-        id = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+        const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+        id = prefix ? prefix + hex.toUpperCase() : hex;
       } while (usedIds.has(id));
       return id;
+    }
+    const PRIORITY_LABELS = { low: 'Baixa', medium: 'Média', high: 'Alta' };
+    function copyState(extra) {
+      return { ...JSON.parse(JSON.stringify(state)), ...extra };
+    }
+    function backlogTasks() {
+      return state.tasks
+        .filter((task) => task.projectId === state.selectedProjectId && task.sprintId === null)
+        .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+    }
+    function nextBacklogOrder(projectId) {
+      const orders = state.tasks
+        .filter((task) => task.projectId === projectId && task.sprintId === null)
+        .map((task) => task.order);
+      return orders.length ? Math.max(...orders) + 1 : 0;
     }
     const projectSelect = document.getElementById('projetos');
     const projectForm = document.getElementById('form-projeto');
@@ -278,22 +337,142 @@
       const projects = renaming
         ? state.projects.map((project) => project.id === id ? { ...project, name } : project)
         : [...state.projects, { id, name }];
-      if (!saveState({ ...state, projects, selectedProjectId: renaming ? state.selectedProjectId : id })) return;
+      if (!saveState(copyState({ projects, selectedProjectId: renaming ? state.selectedProjectId : id }))) return;
       renderProjects();
+      renderBacklog();
       closeProjectForm();
       document.getElementById('status-projeto').textContent = renaming ? 'Projeto renomeado.' : 'Projeto criado e selecionado.';
     });
     projectSelect.addEventListener('change', () => {
       const selectedProjectId = projectSelect.value || null;
-      if (saveState({ ...state, selectedProjectId })) {
+      if (saveState(copyState({ selectedProjectId }))) {
         projectForm.hidden = true;
         editingProjectId = null;
         clearProjectError();
+        closeTaskForm({ restoreFocus: false });
         document.getElementById('status-projeto').textContent = 'Seleção de projeto salva.';
       }
       renderProjects();
+      renderBacklog();
     });
     renderProjects();
+    const newTaskButton = document.getElementById('nova-tarefa');
+    const taskForm = document.getElementById('form-tarefa');
+    const taskTitle = document.getElementById('titulo-tarefa');
+    const taskDescription = document.getElementById('descricao-tarefa');
+    const taskPriority = document.getElementById('prioridade-tarefa');
+    const taskDue = document.getElementById('prazo-tarefa');
+    const taskError = document.getElementById('erro-tarefa');
+    const taskStatus = document.getElementById('status-tarefa');
+    const taskList = document.getElementById('lista-backlog');
+    const backlogEmpty = document.getElementById('vazio-backlog');
+    function clearTaskError() {
+      taskError.hidden = true;
+      taskError.textContent = '';
+      taskTitle.removeAttribute('aria-invalid');
+      taskDue.removeAttribute('aria-invalid');
+    }
+    function resetTaskForm() {
+      taskForm.reset();
+      taskPriority.value = 'medium';
+      clearTaskError();
+    }
+    function closeTaskForm(options) {
+      taskForm.hidden = true;
+      resetTaskForm();
+      if (options && options.restoreFocus === false) return;
+      if (!newTaskButton.hidden && !newTaskButton.disabled) newTaskButton.focus();
+    }
+    function showTaskError(message, field) {
+      taskError.textContent = message;
+      taskError.hidden = false;
+      if (field) {
+        field.setAttribute('aria-invalid', 'true');
+        field.focus();
+      }
+    }
+    function renderBacklog() {
+      const hasProject = state.selectedProjectId !== null;
+      newTaskButton.disabled = storageBlocked || !hasProject;
+      newTaskButton.hidden = !hasProject;
+      const tasks = hasProject ? backlogTasks() : [];
+      taskList.replaceChildren();
+      for (const task of tasks) {
+        const item = document.createElement('li');
+        item.className = 'task-card';
+        const id = document.createElement('p');
+        id.className = 'task-id';
+        id.textContent = task.id;
+        const title = document.createElement('h2');
+        title.className = 'task-title';
+        title.textContent = task.title;
+        const meta = document.createElement('p');
+        meta.className = 'task-meta';
+        const dueText = task.dueDate ? ' · Prazo ' + task.dueDate.split('-').reverse().join('/') : '';
+        meta.textContent = 'Prioridade ' + PRIORITY_LABELS[task.priority] + ' · A fazer' + dueText;
+        const description = document.createElement('p');
+        description.className = 'task-desc';
+        description.textContent = task.description;
+        description.hidden = task.description.length === 0;
+        item.append(id, title, meta, description);
+        taskList.append(item);
+      }
+      taskList.hidden = tasks.length === 0;
+      backlogEmpty.hidden = tasks.length > 0;
+      document.getElementById('titulo-vazio-backlog').textContent = hasProject
+        ? 'Seu backlog começa aqui'
+        : 'Nenhum projeto selecionado';
+      document.getElementById('texto-vazio-backlog').textContent = hasProject
+        ? 'Nenhuma tarefa por enquanto. As tarefas do projeto aparecerão aqui para você organizar suas prioridades.'
+        : 'Crie ou selecione um projeto para registrar tarefas no backlog.';
+    }
+    newTaskButton.addEventListener('click', () => {
+      if (state.selectedProjectId === null) return;
+      resetTaskForm();
+      taskStatus.textContent = '';
+      taskForm.hidden = false;
+      taskTitle.focus();
+    });
+    document.getElementById('cancelar-tarefa').addEventListener('click', () => closeTaskForm());
+    taskTitle.addEventListener('input', clearTaskError);
+    taskDue.addEventListener('input', clearTaskError);
+    taskForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (state.selectedProjectId === null) {
+        showTaskError('Selecione um projeto antes de criar uma tarefa.');
+        return;
+      }
+      const title = taskTitle.value.trim();
+      if (!title) {
+        showTaskError('Informe um título para a tarefa.', taskTitle);
+        return;
+      }
+      const dueDate = taskDue.value === '' ? null : taskDue.value;
+      if (dueDate !== null && !validDate(dueDate)) {
+        showTaskError('Informe um prazo válido no formato de data.', taskDue);
+        return;
+      }
+      const task = {
+        id: createId('T-'),
+        projectId: state.selectedProjectId,
+        title,
+        description: taskDescription.value,
+        priority: taskPriority.value,
+        status: 'todo',
+        dueDate,
+        sprintId: null,
+        order: nextBacklogOrder(state.selectedProjectId)
+      };
+      if (!['low', 'medium', 'high'].includes(task.priority)) {
+        showTaskError('Selecione uma prioridade válida.', taskPriority);
+        return;
+      }
+      if (!saveState(copyState({ tasks: [...state.tasks, task] }))) return;
+      renderBacklog();
+      closeTaskForm();
+      taskStatus.textContent = 'Tarefa ' + task.id + ' criada no backlog.';
+    });
+    renderBacklog();
     const navigation = document.querySelector('nav');
     const screens = document.querySelectorAll('main > section');
     navigation.addEventListener('click', (event) => {

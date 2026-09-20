@@ -36,11 +36,12 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
 
 ## Tarefas e backlog
 
-- [ ] **Tarefa 4 — Criar tarefas no backlog**
+- [x] **Tarefa 4 — Criar tarefas no backlog**
   - Capacidades: CAP-2, CAP-3, CAP-8. Dependências: 3. Regras: R2, R3.
   - Criar formulário com título, descrição, prioridade e prazo opcional; gerar identificador visível estável.
   - Aceite: título vazio é rejeitado; tarefa é criada no projeto selecionado, inicia em A fazer e permanece sem sprint no backlog; valores persistem; textos com marcação são exibidos literalmente; não é possível criar sem projeto.
   - Verificação: criar tarefas com campos mínimos e completos, tentar título vazio e inserir texto semelhante a HTML.
+  - Verificação realizada: revisão do código confirma rejeição de título vazio/espaços, criação apenas com projeto selecionado, estado inicial A fazer, `sprintId` nulo, IDs visíveis `T-` estáveis, persistência via `saveState`/`copyState` e exibição com `textContent`. `node` parseou o script sem erro de sintaxe. Limitação: o navegador integrado e o MCP de browser não estavam disponíveis nesta sessão; o fluxo visual de formulário, recarga e texto semelhante a HTML não foi exercido na interface.
 
 - [ ] **Tarefa 5 — Consultar e editar tarefas**
   - Capacidades: CAP-2, CAP-8. Dependências: 4. Regras: R3, R6.
