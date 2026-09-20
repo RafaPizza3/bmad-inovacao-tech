@@ -58,6 +58,7 @@
     .task-title { margin: 0; font-size: 18px; overflow-wrap: anywhere; }
     .task-meta { margin: 0; color: #536078; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
     .task-desc { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+    .task-actions { display: flex; flex-wrap: wrap; gap: 8px; }
     [hidden] { display: none !important; }
     @media (max-width: 680px) {
       .app { grid-template-columns: minmax(0, 1fr); }
@@ -110,6 +111,7 @@
           <button class="action primary" id="nova-tarefa" type="button">Nova tarefa</button>
         </div>
         <form id="form-tarefa" class="task-form" hidden novalidate>
+          <p id="detalhes-tarefa" class="task-meta" hidden></p>
           <div>
             <label for="titulo-tarefa">Título</label>
             <input id="titulo-tarefa" name="titulo" required autocomplete="off" aria-describedby="erro-tarefa">
@@ -132,7 +134,7 @@
           </div>
           <p id="erro-tarefa" class="field-error" hidden></p>
           <div class="project-actions">
-            <button class="action primary" type="submit">Criar tarefa</button>
+            <button class="action primary" id="salvar-tarefa" type="submit">Criar tarefa</button>
             <button class="action" id="cancelar-tarefa" type="button">Cancelar</button>
           </div>
         </form>
@@ -364,8 +366,17 @@
     const taskDue = document.getElementById('prazo-tarefa');
     const taskError = document.getElementById('erro-tarefa');
     const taskStatus = document.getElementById('status-tarefa');
+    const taskSave = document.getElementById('salvar-tarefa');
+    const taskDetails = document.getElementById('detalhes-tarefa');
     const taskList = document.getElementById('lista-backlog');
     const backlogEmpty = document.getElementById('vazio-backlog');
+    let editingTaskId = null;
+    let taskTrigger = newTaskButton;
+    function taskLocked(task) {
+      if (task.status !== 'done' || task.sprintId === null) return false;
+      const sprint = state.sprints.find((item) => item.id === task.sprintId);
+      return Boolean(sprint && sprint.status === 'closed');
+    }
     function clearTaskError() {
       taskError.hidden = true;
       taskError.textContent = '';
@@ -375,13 +386,38 @@
     function resetTaskForm() {
       taskForm.reset();
       taskPriority.value = 'medium';
+      taskDetails.hidden = true;
+      taskDetails.textContent = '';
+      taskSave.textContent = 'Criar tarefa';
       clearTaskError();
     }
     function closeTaskForm(options) {
+      const trigger = taskTrigger;
       taskForm.hidden = true;
+      editingTaskId = null;
       resetTaskForm();
       if (options && options.restoreFocus === false) return;
-      if (!newTaskButton.hidden && !newTaskButton.disabled) newTaskButton.focus();
+      const focusTarget = trigger && !trigger.hidden && !trigger.disabled ? trigger : newTaskButton;
+      if (!focusTarget.hidden && !focusTarget.disabled) focusTarget.focus();
+    }
+    function openTaskForm(taskId, trigger) {
+      editingTaskId = taskId;
+      taskTrigger = trigger;
+      resetTaskForm();
+      taskStatus.textContent = '';
+      if (taskId !== null) {
+        const task = state.tasks.find((item) => item.id === taskId);
+        const project = state.projects.find((item) => item.id === task.projectId);
+        taskTitle.value = task.title;
+        taskDescription.value = task.description;
+        taskPriority.value = task.priority;
+        taskDue.value = task.dueDate ?? '';
+        taskDetails.hidden = false;
+        taskDetails.textContent = 'ID ' + task.id + ' · Projeto ' + project.name + (task.sprintId ? ' · Sprint vinculada' : ' · Sem sprint');
+        taskSave.textContent = 'Salvar';
+      }
+      taskForm.hidden = false;
+      taskTitle.focus();
     }
     function showTaskError(message, field) {
       taskError.textContent = message;
@@ -414,7 +450,23 @@
         description.className = 'task-desc';
         description.textContent = task.description;
         description.hidden = task.description.length === 0;
-        item.append(id, title, meta, description);
+        const actions = document.createElement('div');
+        actions.className = 'task-actions';
+        const detailsButton = document.createElement('button');
+        detailsButton.className = 'action';
+        detailsButton.type = 'button';
+        detailsButton.dataset.taskId = task.id;
+        detailsButton.textContent = 'Abrir detalhes';
+        detailsButton.disabled = storageBlocked;
+        detailsButton.addEventListener('click', () => {
+          if (taskLocked(task)) {
+            taskStatus.textContent = 'Esta tarefa concluída pertence a uma sprint encerrada e não pode ser editada.';
+            return;
+          }
+          openTaskForm(task.id, detailsButton);
+        });
+        actions.append(detailsButton);
+        item.append(id, title, meta, description, actions);
         taskList.append(item);
       }
       taskList.hidden = tasks.length === 0;
@@ -428,10 +480,7 @@
     }
     newTaskButton.addEventListener('click', () => {
       if (state.selectedProjectId === null) return;
-      resetTaskForm();
-      taskStatus.textContent = '';
-      taskForm.hidden = false;
-      taskTitle.focus();
+      openTaskForm(null, newTaskButton);
     });
     document.getElementById('cancelar-tarefa').addEventListener('click', () => closeTaskForm());
     taskTitle.addEventListener('input', clearTaskError);
@@ -452,6 +501,32 @@
         showTaskError('Informe um prazo válido no formato de data.', taskDue);
         return;
       }
+      if (!['low', 'medium', 'high'].includes(taskPriority.value)) {
+        showTaskError('Selecione uma prioridade válida.', taskPriority);
+        return;
+      }
+      if (editingTaskId !== null) {
+        const current = state.tasks.find((item) => item.id === editingTaskId);
+        if (!current) {
+          showTaskError('A tarefa não está mais disponível.');
+          return;
+        }
+        if (taskLocked(current)) {
+          showTaskError('Esta tarefa concluída pertence a uma sprint encerrada e não pode ser editada.');
+          return;
+        }
+        const tasks = state.tasks.map((item) => item.id === editingTaskId
+          ? { ...item, title, description: taskDescription.value, priority: taskPriority.value, dueDate }
+          : item);
+        if (!saveState(copyState({ tasks }))) return;
+        const savedId = current.id;
+        closeTaskForm({ restoreFocus: false });
+        renderBacklog();
+        const savedButton = taskList.querySelector('[data-task-id="' + CSS.escape(savedId) + '"]');
+        (savedButton || newTaskButton).focus();
+        taskStatus.textContent = 'Tarefa ' + savedId + ' atualizada.';
+        return;
+      }
       const task = {
         id: createId('T-'),
         projectId: state.selectedProjectId,
@@ -463,10 +538,6 @@
         sprintId: null,
         order: nextBacklogOrder(state.selectedProjectId)
       };
-      if (!['low', 'medium', 'high'].includes(task.priority)) {
-        showTaskError('Selecione uma prioridade válida.', taskPriority);
-        return;
-      }
       if (!saveState(copyState({ tasks: [...state.tasks, task] }))) return;
       renderBacklog();
       closeTaskForm();

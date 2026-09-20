@@ -43,11 +43,12 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
   - Verificação: criar tarefas com campos mínimos e completos, tentar título vazio e inserir texto semelhante a HTML.
   - Verificação realizada: revisão do código confirma rejeição de título vazio/espaços, criação apenas com projeto selecionado, estado inicial A fazer, `sprintId` nulo, IDs visíveis `T-` estáveis, persistência via `saveState`/`copyState` e exibição com `textContent`. `node` parseou o script sem erro de sintaxe. Limitação: o navegador integrado e o MCP de browser não estavam disponíveis nesta sessão; o fluxo visual de formulário, recarga e texto semelhante a HTML não foi exercido na interface.
 
-- [ ] **Tarefa 5 — Consultar e editar tarefas**
+- [x] **Tarefa 5 — Consultar e editar tarefas**
   - Capacidades: CAP-2, CAP-8. Dependências: 4. Regras: R3, R6.
   - Abrir detalhes e editar os campos permitidos da tarefa, com ações Salvar e Cancelar.
   - Aceite: edição mantém ID e projeto; ID, projeto e vínculos com sprint não são alterados pela edição; cancelar preserva dados; validações da criação continuam válidas; alterações aparecem na lista e sobrevivem à recarga.
   - Verificação: editar cada campo, cancelar outra edição e comparar os dados após recarregar.
+  - Verificação realizada: o formulário reutilizado mostra ID, projeto e vínculo de sprint só como texto; Salvar copia título, descrição, prioridade e prazo sem mudar `id`, `projectId`, `sprintId`, `status` nem `order`; Cancelar fecha sem `saveState`; título vazio continua rejeitado. Tarefas concluídas de sprint encerrada não abrem edição (R6). Limitação: navegador integrado indisponível; persistência após recarga e o cancelamento visual não foram exercidos na interface.
 
 - [ ] **Tarefa 6 — Excluir tarefas com confirmação**
   - Capacidades: CAP-2, CAP-8. Dependências: 5. Regras: R6.
