@@ -442,6 +442,23 @@
       taskStatus.textContent = 'Tarefa ' + task.id + ' excluída.';
       newTaskButton.focus();
     }
+    function reorderTask(taskId, direction) {
+      const tasks = backlogTasks();
+      const currentIndex = tasks.findIndex((task) => task.id === taskId);
+      const targetIndex = currentIndex + direction;
+      if (currentIndex < 0 || targetIndex < 0 || targetIndex >= tasks.length) return;
+      const reorderedIds = tasks.map((task) => task.id);
+      [reorderedIds[currentIndex], reorderedIds[targetIndex]] = [reorderedIds[targetIndex], reorderedIds[currentIndex]];
+      const orderById = new Map(reorderedIds.map((id, index) => [id, index]));
+      const nextTasks = state.tasks.map((task) => orderById.has(task.id)
+        ? { ...task, order: orderById.get(task.id) }
+        : task);
+      if (!saveState(copyState({ tasks: nextTasks }))) return;
+      renderBacklog();
+      const detailsButton = taskList.querySelector('[data-task-id="' + CSS.escape(taskId) + '"]');
+      (detailsButton || newTaskButton).focus();
+      taskStatus.textContent = 'Ordem do backlog atualizada.';
+    }
     function renderBacklog() {
       const hasProject = state.selectedProjectId !== null;
       newTaskButton.disabled = storageBlocked || !hasProject;
@@ -488,6 +505,27 @@
         deleteButton.disabled = storageBlocked;
         deleteButton.addEventListener('click', () => deleteTask(task.id));
         actions.append(deleteButton);
+        const taskIndex = tasks.findIndex((item) => item.id === task.id);
+        const moveUpButton = document.createElement('button');
+        moveUpButton.className = 'action';
+        moveUpButton.type = 'button';
+        moveUpButton.textContent = 'Subir';
+        moveUpButton.setAttribute('aria-label', 'Subir ' + task.id + ' no backlog');
+        moveUpButton.disabled = storageBlocked || taskIndex === 0;
+        moveUpButton.dataset.taskId = task.id;
+        moveUpButton.dataset.reorder = 'up';
+        moveUpButton.addEventListener('click', () => reorderTask(task.id, -1));
+        actions.append(moveUpButton);
+        const moveDownButton = document.createElement('button');
+        moveDownButton.className = 'action';
+        moveDownButton.type = 'button';
+        moveDownButton.textContent = 'Descer';
+        moveDownButton.setAttribute('aria-label', 'Descer ' + task.id + ' no backlog');
+        moveDownButton.disabled = storageBlocked || taskIndex === tasks.length - 1;
+        moveDownButton.dataset.taskId = task.id;
+        moveDownButton.dataset.reorder = 'down';
+        moveDownButton.addEventListener('click', () => reorderTask(task.id, 1));
+        actions.append(moveDownButton);
         item.append(id, title, meta, description, actions);
         taskList.append(item);
       }

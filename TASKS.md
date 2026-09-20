@@ -57,11 +57,12 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
   - Verificação: cancelar e confirmar exclusões em um projeto com várias tarefas.
   - Verificação realizada: a ação Excluir identifica a tarefa por ID e título em `window.confirm`; cancelamento não chama `saveState`; confirmação remove apenas o ID indicado pelo `deleteTask`, atualiza a lista e persiste a alteração; falhas de gravação preservam o estado anterior. Sintaxe JavaScript e `git diff --check` aprovados. Limitação: navegador integrado indisponível; confirmação, foco e persistência após recarga não foram exercidos visualmente.
 
-- [ ] **Tarefa 7 — Ordenar o backlog manualmente**
+- [x] **Tarefa 7 — Ordenar o backlog manualmente**
   - Capacidades: CAP-3, CAP-9. Dependências: 4. Regras: R2, R7.
   - Adicionar ações acessíveis para subir e descer tarefas, persistindo sua ordem por projeto.
   - Aceite: a ordem sobrevive à recarga e à troca de projeto; controles nos extremos não produzem movimentos inválidos; nenhuma tarefa é perdida ou duplicada.
   - Verificação: reordenar três tarefas por teclado e repetir com lista vazia e com apenas uma tarefa.
+  - Verificação realizada: cada cartão recebeu controles Subir/Descer com rótulos acessíveis, os extremos são desabilitados e `reorderTask` troca apenas as posições das tarefas do backlog do projeto selecionado, normalizando sua ordem antes de salvar. Sintaxe JavaScript, presença dos controles e `git diff --check` aprovados. Limitação: navegador integrado indisponível; teclado real, recarga, troca de projeto e os cenários vazio/uma tarefa não foram exercidos visualmente.
 
 ## Planejamento de sprints
 
