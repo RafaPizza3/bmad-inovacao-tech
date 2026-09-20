@@ -6,7 +6,7 @@ sources: []
 
 # Gerenciador individual de tarefas
 
-Status: tarefas 1–3 autorizadas; persistência com localStorage e regra R1 confirmadas pelo usuário em 18/09/2026. As demais regras aguardam confirmação antes das tarefas afetadas.
+Status: tarefas 1–7 autorizadas. Persistência com localStorage e regra R1 foram confirmadas pelo usuário em 18/09/2026. Em 20/09/2026, as regras R2, R3 e R6 foram confirmadas e a R7 foi adicionada para formalizar a ordenação manual do backlog. As regras R4 e R5 aguardam confirmação antes das tarefas afetadas.
 
 ## Por quê
 
@@ -63,6 +63,7 @@ Uma pessoa cria um projeto e tarefas, organiza o backlog, planeja e inicia uma s
 - R4: exigir nome e datas válidas na sprint, com fim igual ou posterior ao início; objetivo é opcional. Permitir iniciar sprint vazia, sem transições automáticas por data.
 - R5: ao encerrar uma sprint, manter tarefas concluídas nela e devolver as pendentes ao backlog, preservando seu estado. Registrar um resumo do encerramento com identificadores, títulos e estados daquele momento para preservar o histórico.
 - R6: permitir excluir tarefas mediante confirmação; não oferecer exclusão de projetos ou sprints nesta versão. Bloquear edição de sprints encerradas e de suas tarefas concluídas para preservar o resultado.
+- R7: cada projeto mantém uma ordem própria para as tarefas do backlog; essa ordem pode ser alterada pelos controles de subir/descer e deve ser persistida.
 
 ## Questões abertas
 

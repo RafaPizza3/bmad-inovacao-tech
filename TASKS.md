@@ -39,13 +39,13 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
 - [ ] **Tarefa 4 — Criar tarefas no backlog**
   - Capacidades: CAP-2, CAP-3, CAP-8. Dependências: 3. Regras: R2, R3.
   - Criar formulário com título, descrição, prioridade e prazo opcional; gerar identificador visível estável.
-  - Aceite: título vazio é rejeitado; tarefa nasce sem sprint no projeto selecionado; valores persistem; textos com marcação são exibidos literalmente; não é possível criar sem projeto.
+  - Aceite: título vazio é rejeitado; tarefa é criada no projeto selecionado, inicia em A fazer e permanece sem sprint no backlog; valores persistem; textos com marcação são exibidos literalmente; não é possível criar sem projeto.
   - Verificação: criar tarefas com campos mínimos e completos, tentar título vazio e inserir texto semelhante a HTML.
 
 - [ ] **Tarefa 5 — Consultar e editar tarefas**
   - Capacidades: CAP-2, CAP-8. Dependências: 4. Regras: R3, R6.
-  - Abrir detalhes e editar os campos da tarefa, com ações Salvar e Cancelar.
-  - Aceite: edição mantém ID e projeto; cancelar preserva dados; validações da criação continuam válidas; alterações aparecem na lista e sobrevivem à recarga.
+  - Abrir detalhes e editar os campos permitidos da tarefa, com ações Salvar e Cancelar.
+  - Aceite: edição mantém ID e projeto; ID, projeto e vínculos com sprint não são alterados pela edição; cancelar preserva dados; validações da criação continuam válidas; alterações aparecem na lista e sobrevivem à recarga.
   - Verificação: editar cada campo, cancelar outra edição e comparar os dados após recarregar.
 
 - [ ] **Tarefa 6 — Excluir tarefas com confirmação**
@@ -55,7 +55,7 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
   - Verificação: cancelar e confirmar exclusões em um projeto com várias tarefas.
 
 - [ ] **Tarefa 7 — Ordenar o backlog manualmente**
-  - Capacidades: CAP-3, CAP-9. Dependências: 4. Regras: R2.
+  - Capacidades: CAP-3, CAP-9. Dependências: 4. Regras: R2, R7.
   - Adicionar ações acessíveis para subir e descer tarefas, persistindo sua ordem por projeto.
   - Aceite: a ordem sobrevive à recarga e à troca de projeto; controles nos extremos não produzem movimentos inválidos; nenhuma tarefa é perdida ou duplicada.
   - Verificação: reordenar três tarefas por teclado e repetir com lista vazia e com apenas uma tarefa.
