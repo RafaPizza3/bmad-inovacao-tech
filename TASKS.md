@@ -82,11 +82,13 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
 
   - Verificação realizada: o backlog passou a oferecer seleção de sprints planejadas do projeto atual; cada sprint lista suas tarefas e permite transferir para outra sprint planejada ou retirar para o backlog. A operação centralizada valida projeto e status, atualiza `sprintId` e ordem do backlog, salva pelo fluxo persistente e renderiza as duas visões. A sintaxe JavaScript foi validada com Node e as referências dos controles foram conferidas no código. Limitação: não houve navegador disponível para executar visualmente a associação, transferência, recarga e navegação por teclado.
 
-- [ ] **Tarefa 10 — Iniciar uma sprint**
+- [x] **Tarefa 10 — Iniciar uma sprint**
   - Capacidades: CAP-6. Dependências: 9. Regras: R1, R4.
   - Implementar transição Planejada → Ativa e indicar a sprint ativa do projeto.
   - Aceite: impedir segunda sprint ativa no mesmo projeto; permitir sprint ativa independente em outro projeto; início persiste e disponibiliza as tarefas para o quadro.
   - Verificação: iniciar sprint, tentar iniciar outra no mesmo projeto e repetir em projeto diferente.
+
+  - Verificação realizada: o botão `Iniciar` altera a sprint planejada para `Ativa` e persiste a mudança; uma segunda sprint no mesmo projeto é recusada com mensagem informando a sprint ativa; outro projeto conseguiu iniciar sua própria sprint. O estado ativo permaneceu após recarregar a página. Durante o teste visual foi corrigida a atualização da tela de sprints após criar ou trocar o projeto. Sintaxe JavaScript e `git diff --check` aprovados. Limitação: o quadro ainda será implementado na tarefa 11; nesta etapa a disponibilidade é representada pelo estado ativo persistido.
 
 ## Execução e encerramento
 

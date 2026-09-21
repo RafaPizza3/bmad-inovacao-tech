@@ -387,6 +387,7 @@
       if (!saveState(copyState({ projects, selectedProjectId: renaming ? state.selectedProjectId : id }))) return;
       renderProjects();
       renderBacklog();
+      renderSprints();
       closeProjectForm();
       document.getElementById('status-projeto').textContent = renaming ? 'Projeto renomeado.' : 'Projeto criado e selecionado.';
     });
@@ -397,10 +398,12 @@
         editingProjectId = null;
         clearProjectError();
         closeTaskForm({ restoreFocus: false });
+        closeSprintForm({ restoreFocus: false });
         document.getElementById('status-projeto').textContent = 'Seleção de projeto salva.';
       }
       renderProjects();
       renderBacklog();
+      renderSprints();
     });
     renderProjects();
     const newTaskButton = document.getElementById('nova-tarefa');
@@ -739,6 +742,15 @@
         editButton.disabled = storageBlocked || sprint.status === 'active';
         editButton.addEventListener('click', () => openSprintForm(sprint.id, editButton));
         actions.append(editButton);
+        if (sprint.status === 'planned') {
+          const startButton = document.createElement('button');
+          startButton.className = 'action primary';
+          startButton.type = 'button';
+          startButton.textContent = 'Iniciar';
+          startButton.disabled = storageBlocked;
+          startButton.addEventListener('click', () => startSprint(sprint.id));
+          actions.append(startButton);
+        }
         item.append(header, goal, sprintTasks, actions);
         sprintList.append(item);
       }
@@ -748,6 +760,27 @@
       document.getElementById('texto-vazio-sprint').textContent = hasProject
         ? 'As sprints do projeto aparecerão aqui, com seus objetivos e períodos de trabalho.'
         : 'Crie ou selecione um projeto para organizar suas sprints.';
+    }
+
+    function startSprint(sprintId) {
+      const sprint = state.sprints.find((item) => item.id === sprintId);
+      if (!sprint || sprint.projectId !== state.selectedProjectId) {
+        sprintStatus.textContent = 'A sprint não pertence ao projeto selecionado.';
+        return;
+      }
+      if (sprint.status !== 'planned') {
+        sprintStatus.textContent = 'Apenas sprints planejadas podem ser iniciadas.';
+        return;
+      }
+      const activeSprint = state.sprints.find((item) => item.projectId === sprint.projectId && item.status === 'active');
+      if (activeSprint) {
+        sprintStatus.textContent = 'O projeto já possui uma sprint ativa: ' + activeSprint.name + '.';
+        return;
+      }
+      const sprints = state.sprints.map((item) => item.id === sprintId ? { ...item, status: 'active' } : item);
+      if (!saveState(copyState({ sprints }))) return;
+      renderSprints();
+      sprintStatus.textContent = 'Sprint ' + sprint.name + ' iniciada.';
     }
 
     function moveTaskToSprint(taskId, sprintId) {
