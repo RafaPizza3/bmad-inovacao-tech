@@ -74,11 +74,13 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
 
   - Verificação realizada: o formulário de sprint foi implementado em `index.html` com validação de nome e datas, renderização por projeto, edição preservando o ID e persistência em `localStorage` usando o mesmo fluxo de estado do restante do app. A checagem de sintaxe do JavaScript e o `git diff --check` foram executados com sucesso. Limitação: não houve navegador disponível nesta sessão para validar a interação visual real com mouse/teclado e a troca de projetos em interface gráfica.
 
-- [ ] **Tarefa 9 — Distribuir tarefas entre backlog e sprints**
+- [x] **Tarefa 9 — Distribuir tarefas entre backlog e sprints**
   - Capacidades: CAP-3, CAP-4. Dependências: 7, 8. Regras: R2, R6.
   - Adicionar controles para associar tarefas a sprints planejadas e devolvê-las ao fim do backlog.
   - Aceite: uma tarefa não aparece simultaneamente no backlog e na sprint; transferência atualiza ambas as listas e persiste; não aceita sprint de outro projeto ou encerrada.
   - Verificação: associar, transferir entre sprints planejadas e retirar tarefas; recarregar e conferir os vínculos.
+
+  - Verificação realizada: o backlog passou a oferecer seleção de sprints planejadas do projeto atual; cada sprint lista suas tarefas e permite transferir para outra sprint planejada ou retirar para o backlog. A operação centralizada valida projeto e status, atualiza `sprintId` e ordem do backlog, salva pelo fluxo persistente e renderiza as duas visões. A sintaxe JavaScript foi validada com Node e as referências dos controles foram conferidas no código. Limitação: não houve navegador disponível para executar visualmente a associação, transferência, recarga e navegação por teclado.
 
 - [ ] **Tarefa 10 — Iniciar uma sprint**
   - Capacidades: CAP-6. Dependências: 9. Regras: R1, R4.

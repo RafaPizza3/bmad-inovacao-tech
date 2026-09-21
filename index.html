@@ -62,6 +62,12 @@
     .sprint-meta { margin: 0; color: #536078; font-size: 13px; line-height: 1.6; }
     .sprint-goal { margin: 0; color: #43516a; line-height: 1.6; }
     .sprint-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .sprint-tasks { list-style: none; margin: 0; padding: 12px 0 0; border-top: 1px solid #dce2ed; display: grid; gap: 8px; }
+    .sprint-task { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+    .sprint-task-title { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+    .sprint-task-title strong { font-family: ui-monospace, monospace; font-size: 12px; color: #536078; }
+    .sprint-task-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .task-sprint-select { max-width: 220px; }
     .sprint-form { margin-top: 18px; background: white; border: 1px solid #dce2ed; border-radius: 14px; padding: 20px; display: grid; gap: 14px; }
     .sprint-form input, .sprint-form textarea { width: 100%; min-width: 0; padding: 10px; border: 1px solid #9baac3; border-radius: 7px; background: white; }
     .sprint-form textarea { min-height: 84px; resize: vertical; }
@@ -523,6 +529,19 @@
         description.hidden = task.description.length === 0;
         const actions = document.createElement('div');
         actions.className = 'task-actions';
+        const sprintSelect = document.createElement('select');
+        sprintSelect.className = 'task-sprint-select';
+        sprintSelect.setAttribute('aria-label', 'Sprint da tarefa ' + task.id);
+        const noSprintOption = new Option('Associar a sprint', '');
+        sprintSelect.add(noSprintOption);
+        const plannedSprints = state.sprints.filter((sprint) => sprint.projectId === state.selectedProjectId && sprint.status === 'planned');
+        for (const sprint of plannedSprints) sprintSelect.add(new Option(sprint.name, sprint.id));
+        sprintSelect.disabled = storageBlocked || plannedSprints.length === 0;
+        sprintSelect.addEventListener('change', () => {
+          if (sprintSelect.value) moveTaskToSprint(task.id, sprintSelect.value);
+          sprintSelect.value = '';
+        });
+        actions.append(sprintSelect);
         const detailsButton = document.createElement('button');
         detailsButton.className = 'action';
         detailsButton.type = 'button';
@@ -667,6 +686,50 @@
         const goal = document.createElement('p');
         goal.className = 'sprint-goal';
         goal.textContent = sprint.goal || 'Sem objetivo definido.';
+        const sprintTasks = document.createElement('ul');
+        sprintTasks.className = 'sprint-tasks';
+        const tasks = state.tasks.filter((task) => task.projectId === state.selectedProjectId && task.sprintId === sprint.id);
+        if (tasks.length === 0) {
+          const emptyTask = document.createElement('li');
+          emptyTask.className = 'sprint-meta';
+          emptyTask.textContent = 'Nenhuma tarefa associada.';
+          sprintTasks.append(emptyTask);
+        }
+        for (const task of tasks) {
+          const taskItem = document.createElement('li');
+          taskItem.className = 'sprint-task';
+          const taskTitle = document.createElement('p');
+          taskTitle.className = 'sprint-task-title';
+          const taskId = document.createElement('strong');
+          taskId.textContent = task.id;
+          taskTitle.append(taskId, document.createTextNode(' · ' + task.title));
+          const taskActions = document.createElement('div');
+          taskActions.className = 'sprint-task-actions';
+          if (sprint.status === 'planned') {
+            const transferSelect = document.createElement('select');
+            transferSelect.className = 'task-sprint-select';
+            transferSelect.setAttribute('aria-label', 'Transferir tarefa ' + task.id);
+            transferSelect.add(new Option('Transferir para...', ''));
+            for (const target of state.sprints.filter((item) => item.projectId === state.selectedProjectId && item.status === 'planned' && item.id !== sprint.id)) {
+              transferSelect.add(new Option(target.name, target.id));
+            }
+            transferSelect.disabled = storageBlocked || transferSelect.options.length === 1;
+            transferSelect.addEventListener('change', () => {
+              if (transferSelect.value) moveTaskToSprint(task.id, transferSelect.value);
+              transferSelect.value = '';
+            });
+            taskActions.append(transferSelect);
+            const removeButton = document.createElement('button');
+            removeButton.className = 'action';
+            removeButton.type = 'button';
+            removeButton.textContent = 'Retirar';
+            removeButton.disabled = storageBlocked;
+            removeButton.addEventListener('click', () => moveTaskToSprint(task.id, null));
+            taskActions.append(removeButton);
+          }
+          taskItem.append(taskTitle, taskActions);
+          sprintTasks.append(taskItem);
+        }
         const actions = document.createElement('div');
         actions.className = 'sprint-actions';
         const editButton = document.createElement('button');
@@ -676,7 +739,7 @@
         editButton.disabled = storageBlocked || sprint.status === 'active';
         editButton.addEventListener('click', () => openSprintForm(sprint.id, editButton));
         actions.append(editButton);
-        item.append(header, goal, actions);
+        item.append(header, goal, sprintTasks, actions);
         sprintList.append(item);
       }
       sprintList.hidden = items.length === 0;
@@ -685,6 +748,33 @@
       document.getElementById('texto-vazio-sprint').textContent = hasProject
         ? 'As sprints do projeto aparecerão aqui, com seus objetivos e períodos de trabalho.'
         : 'Crie ou selecione um projeto para organizar suas sprints.';
+    }
+
+    function moveTaskToSprint(taskId, sprintId) {
+      const task = state.tasks.find((item) => item.id === taskId);
+      if (!task || task.projectId !== state.selectedProjectId) {
+        sprintStatus.textContent = 'A tarefa não pertence ao projeto selecionado.';
+        return;
+      }
+      let targetSprint = null;
+      if (sprintId !== null) {
+        targetSprint = state.sprints.find((sprint) => sprint.id === sprintId);
+        if (!targetSprint || targetSprint.projectId !== task.projectId || targetSprint.status !== 'planned') {
+          sprintStatus.textContent = 'Só é possível associar tarefas a sprints planejadas do mesmo projeto.';
+          renderBacklog();
+          renderSprints();
+          return;
+        }
+      }
+      const nextTasks = state.tasks.map((item) => item.id === taskId
+        ? { ...item, sprintId, order: sprintId === null ? nextBacklogOrder(task.projectId) : item.order }
+        : item);
+      if (!saveState(copyState({ tasks: nextTasks }))) return;
+      renderBacklog();
+      renderSprints();
+      sprintStatus.textContent = targetSprint
+        ? 'Tarefa ' + task.id + ' associada à sprint ' + targetSprint.name + '.'
+        : 'Tarefa ' + task.id + ' devolvida ao backlog.';
     }
 
     newSprintButton.addEventListener('click', () => {
