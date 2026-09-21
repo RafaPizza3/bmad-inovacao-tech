@@ -36,29 +36,33 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
 
 ## Tarefas e backlog
 
-- [ ] **Tarefa 4 — Criar tarefas no backlog**
+- [x] **Tarefa 4 — Criar tarefas no backlog**
   - Capacidades: CAP-2, CAP-3, CAP-8. Dependências: 3. Regras: R2, R3.
   - Criar formulário com título, descrição, prioridade e prazo opcional; gerar identificador visível estável.
-  - Aceite: título vazio é rejeitado; tarefa nasce sem sprint no projeto selecionado; valores persistem; textos com marcação são exibidos literalmente; não é possível criar sem projeto.
+  - Aceite: título vazio é rejeitado; tarefa é criada no projeto selecionado, inicia em A fazer e permanece sem sprint no backlog; valores persistem; textos com marcação são exibidos literalmente; não é possível criar sem projeto.
   - Verificação: criar tarefas com campos mínimos e completos, tentar título vazio e inserir texto semelhante a HTML.
+  - Verificação realizada: revisão do código confirma rejeição de título vazio/espaços, criação apenas com projeto selecionado, estado inicial A fazer, `sprintId` nulo, IDs visíveis `T-` estáveis, persistência via `saveState`/`copyState` e exibição com `textContent`. `node` parseou o script sem erro de sintaxe. Limitação: o navegador integrado e o MCP de browser não estavam disponíveis nesta sessão; o fluxo visual de formulário, recarga e texto semelhante a HTML não foi exercido na interface.
 
-- [ ] **Tarefa 5 — Consultar e editar tarefas**
+- [x] **Tarefa 5 — Consultar e editar tarefas**
   - Capacidades: CAP-2, CAP-8. Dependências: 4. Regras: R3, R6.
-  - Abrir detalhes e editar os campos da tarefa, com ações Salvar e Cancelar.
-  - Aceite: edição mantém ID e projeto; cancelar preserva dados; validações da criação continuam válidas; alterações aparecem na lista e sobrevivem à recarga.
+  - Abrir detalhes e editar os campos permitidos da tarefa, com ações Salvar e Cancelar.
+  - Aceite: edição mantém ID e projeto; ID, projeto e vínculos com sprint não são alterados pela edição; cancelar preserva dados; validações da criação continuam válidas; alterações aparecem na lista e sobrevivem à recarga.
   - Verificação: editar cada campo, cancelar outra edição e comparar os dados após recarregar.
+  - Verificação realizada: o formulário reutilizado mostra ID, projeto e vínculo de sprint só como texto; Salvar copia título, descrição, prioridade e prazo sem mudar `id`, `projectId`, `sprintId`, `status` nem `order`; Cancelar fecha sem `saveState`; título vazio continua rejeitado. Tarefas concluídas de sprint encerrada não abrem edição (R6). Limitação: navegador integrado indisponível; persistência após recarga e o cancelamento visual não foram exercidos na interface.
 
-- [ ] **Tarefa 6 — Excluir tarefas com confirmação**
+- [x] **Tarefa 6 — Excluir tarefas com confirmação**
   - Capacidades: CAP-2, CAP-8. Dependências: 5. Regras: R6.
   - Permitir exclusão identificando a tarefa na confirmação; centralizar a remoção para não deixar referências inválidas.
   - Aceite: cancelar não altera o estado; confirmar remove somente a tarefa indicada; contagens e listas se atualizam; exclusão persiste.
   - Verificação: cancelar e confirmar exclusões em um projeto com várias tarefas.
+  - Verificação realizada: a ação Excluir identifica a tarefa por ID e título em `window.confirm`; cancelamento não chama `saveState`; confirmação remove apenas o ID indicado pelo `deleteTask`, atualiza a lista e persiste a alteração; falhas de gravação preservam o estado anterior. Sintaxe JavaScript e `git diff --check` aprovados. Limitação: navegador integrado indisponível; confirmação, foco e persistência após recarga não foram exercidos visualmente.
 
-- [ ] **Tarefa 7 — Ordenar o backlog manualmente**
-  - Capacidades: CAP-3, CAP-9. Dependências: 4. Regras: R2.
+- [x] **Tarefa 7 — Ordenar o backlog manualmente**
+  - Capacidades: CAP-3, CAP-9. Dependências: 4. Regras: R2, R7.
   - Adicionar ações acessíveis para subir e descer tarefas, persistindo sua ordem por projeto.
   - Aceite: a ordem sobrevive à recarga e à troca de projeto; controles nos extremos não produzem movimentos inválidos; nenhuma tarefa é perdida ou duplicada.
   - Verificação: reordenar três tarefas por teclado e repetir com lista vazia e com apenas uma tarefa.
+  - Verificação realizada: cada cartão recebeu controles Subir/Descer com rótulos acessíveis, os extremos são desabilitados e `reorderTask` troca apenas as posições das tarefas do backlog do projeto selecionado, normalizando sua ordem antes de salvar. Sintaxe JavaScript, presença dos controles e `git diff --check` aprovados. Limitação: navegador integrado indisponível; teclado real, recarga, troca de projeto e os cenários vazio/uma tarefa não foram exercidos visualmente.
 
 ## Planejamento de sprints
 
