@@ -54,6 +54,23 @@
     textarea { min-height: 96px; resize: vertical; }
     .task-list { list-style: none; margin: 0; padding: 12px; display: grid; gap: 10px; }
     .task-card { display: grid; gap: 8px; }
+    .sprint-list, .kanban-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+    .sprint-card { background: white; border: 1px solid #dce2ed; border-radius: 14px; padding: 18px 20px; display: grid; gap: 10px; }
+    .sprint-card-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+    .sprint-badge { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; background: #eaf0ff; color: #194cae; font-size: 12px; font-weight: 700; }
+    .sprint-name { margin: 0; font-size: 18px; }
+    .sprint-meta { margin: 0; color: #536078; font-size: 13px; line-height: 1.6; }
+    .sprint-goal { margin: 0; color: #43516a; line-height: 1.6; }
+    .sprint-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .sprint-tasks { list-style: none; margin: 0; padding: 12px 0 0; border-top: 1px solid #dce2ed; display: grid; gap: 8px; }
+    .sprint-task { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+    .sprint-task-title { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+    .sprint-task-title strong { font-family: ui-monospace, monospace; font-size: 12px; color: #536078; }
+    .sprint-task-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .task-sprint-select { max-width: 220px; }
+    .sprint-form { margin-top: 18px; background: white; border: 1px solid #dce2ed; border-radius: 14px; padding: 20px; display: grid; gap: 14px; }
+    .sprint-form input, .sprint-form textarea { width: 100%; min-width: 0; padding: 10px; border: 1px solid #9baac3; border-radius: 7px; background: white; }
+    .sprint-form textarea { min-height: 84px; resize: vertical; }
     .task-id { margin: 0; font-family: ui-monospace, monospace; font-size: 12px; color: #536078; overflow-wrap: anywhere; }
     .task-title { margin: 0; font-size: 18px; overflow-wrap: anywhere; }
     .task-meta { margin: 0; color: #536078; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
@@ -150,7 +167,35 @@
       <section id="sprints" aria-labelledby="titulo-sprints" hidden>
         <h1 id="titulo-sprints">Sprints</h1>
         <p class="intro">Reserve tempo e dê um objetivo ao seu próximo ciclo.</p>
-        <div class="empty"><span class="empty-icon" aria-hidden="true">↻</span><h2>Nenhuma sprint planejada</h2><p>As sprints do projeto aparecerão aqui, com seus objetivos e períodos de trabalho.</p></div>
+        <div class="project-actions">
+          <button class="action primary" id="nova-sprint" type="button">Nova sprint</button>
+        </div>
+        <form id="form-sprint" class="sprint-form" hidden novalidate>
+          <div>
+            <label for="nome-sprint">Nome</label>
+            <input id="nome-sprint" name="nome" required autocomplete="off" aria-describedby="erro-sprint">
+          </div>
+          <div>
+            <label for="objetivo-sprint">Objetivo (opcional)</label>
+            <textarea id="objetivo-sprint" name="objetivo"></textarea>
+          </div>
+          <div>
+            <label for="inicio-sprint">Início</label>
+            <input id="inicio-sprint" name="inicio" type="date" required>
+          </div>
+          <div>
+            <label for="fim-sprint">Fim</label>
+            <input id="fim-sprint" name="fim" type="date" required>
+          </div>
+          <p id="erro-sprint" class="field-error" hidden></p>
+          <div class="project-actions">
+            <button class="action primary" id="salvar-sprint" type="submit">Criar sprint</button>
+            <button class="action" id="cancelar-sprint" type="button">Cancelar</button>
+          </div>
+        </form>
+        <p id="status-sprint" class="project-status" role="status"></p>
+        <ul id="lista-sprints" class="sprint-list" hidden></ul>
+        <div class="empty" id="vazio-sprint"><span class="empty-icon" aria-hidden="true">↻</span><h2 id="titulo-vazio-sprint">Nenhuma sprint planejada</h2><p id="texto-vazio-sprint">As sprints do projeto aparecerão aqui, com seus objetivos e períodos de trabalho.</p></div>
       </section>
       <p class="footer">Gerenciador individual de tarefas</p>
       <p id="aviso-navegacao" role="status" style="position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%)"></p>
@@ -342,6 +387,7 @@
       if (!saveState(copyState({ projects, selectedProjectId: renaming ? state.selectedProjectId : id }))) return;
       renderProjects();
       renderBacklog();
+      renderSprints();
       closeProjectForm();
       document.getElementById('status-projeto').textContent = renaming ? 'Projeto renomeado.' : 'Projeto criado e selecionado.';
     });
@@ -352,10 +398,12 @@
         editingProjectId = null;
         clearProjectError();
         closeTaskForm({ restoreFocus: false });
+        closeSprintForm({ restoreFocus: false });
         document.getElementById('status-projeto').textContent = 'Seleção de projeto salva.';
       }
       renderProjects();
       renderBacklog();
+      renderSprints();
     });
     renderProjects();
     const newTaskButton = document.getElementById('nova-tarefa');
@@ -484,6 +532,19 @@
         description.hidden = task.description.length === 0;
         const actions = document.createElement('div');
         actions.className = 'task-actions';
+        const sprintSelect = document.createElement('select');
+        sprintSelect.className = 'task-sprint-select';
+        sprintSelect.setAttribute('aria-label', 'Sprint da tarefa ' + task.id);
+        const noSprintOption = new Option('Associar a sprint', '');
+        sprintSelect.add(noSprintOption);
+        const plannedSprints = state.sprints.filter((sprint) => sprint.projectId === state.selectedProjectId && sprint.status === 'planned');
+        for (const sprint of plannedSprints) sprintSelect.add(new Option(sprint.name, sprint.id));
+        sprintSelect.disabled = storageBlocked || plannedSprints.length === 0;
+        sprintSelect.addEventListener('change', () => {
+          if (sprintSelect.value) moveTaskToSprint(task.id, sprintSelect.value);
+          sprintSelect.value = '';
+        });
+        actions.append(sprintSelect);
         const detailsButton = document.createElement('button');
         detailsButton.className = 'action';
         detailsButton.type = 'button';
@@ -538,6 +599,280 @@
         ? 'Nenhuma tarefa por enquanto. As tarefas do projeto aparecerão aqui para você organizar suas prioridades.'
         : 'Crie ou selecione um projeto para registrar tarefas no backlog.';
     }
+
+    const newSprintButton = document.getElementById('nova-sprint');
+    const sprintForm = document.getElementById('form-sprint');
+    const sprintName = document.getElementById('nome-sprint');
+    const sprintGoal = document.getElementById('objetivo-sprint');
+    const sprintStart = document.getElementById('inicio-sprint');
+    const sprintEnd = document.getElementById('fim-sprint');
+    const sprintError = document.getElementById('erro-sprint');
+    const sprintStatus = document.getElementById('status-sprint');
+    const sprintList = document.getElementById('lista-sprints');
+    const sprintEmpty = document.getElementById('vazio-sprint');
+    let editingSprintId = null;
+    let sprintTrigger = newSprintButton;
+
+    function clearSprintError() {
+      sprintError.hidden = true;
+      sprintError.textContent = '';
+      sprintName.removeAttribute('aria-invalid');
+      sprintStart.removeAttribute('aria-invalid');
+      sprintEnd.removeAttribute('aria-invalid');
+    }
+
+    function resetSprintForm() {
+      sprintForm.reset();
+      sprintForm.querySelector('#salvar-sprint').textContent = 'Criar sprint';
+      clearSprintError();
+    }
+
+    function closeSprintForm(options) {
+      sprintForm.hidden = true;
+      editingSprintId = null;
+      resetSprintForm();
+      if (options && options.restoreFocus === false) return;
+      const trigger = sprintTrigger && !sprintTrigger.hidden && !sprintTrigger.disabled ? sprintTrigger : newSprintButton;
+      if (!trigger.hidden && !trigger.disabled) trigger.focus();
+    }
+
+    function openSprintForm(sprintId, trigger) {
+      editingSprintId = sprintId;
+      sprintTrigger = trigger;
+      resetSprintForm();
+      sprintStatus.textContent = '';
+      if (sprintId !== null) {
+        const sprint = state.sprints.find((item) => item.id === sprintId);
+        if (!sprint) return;
+        sprintName.value = sprint.name;
+        sprintGoal.value = sprint.goal;
+        sprintStart.value = sprint.startDate;
+        sprintEnd.value = sprint.endDate;
+        sprintForm.querySelector('#salvar-sprint').textContent = 'Salvar';
+      }
+      sprintForm.hidden = false;
+      sprintName.focus();
+    }
+
+    function showSprintError(message, field) {
+      sprintError.textContent = message;
+      sprintError.hidden = false;
+      if (field) {
+        field.setAttribute('aria-invalid', 'true');
+        field.focus();
+      }
+    }
+
+    function renderSprints() {
+      const hasProject = state.selectedProjectId !== null;
+      newSprintButton.disabled = storageBlocked || !hasProject;
+      newSprintButton.hidden = !hasProject;
+      const items = hasProject ? state.sprints.filter((sprint) => sprint.projectId === state.selectedProjectId && sprint.status !== 'closed') : [];
+      sprintList.replaceChildren();
+      for (const sprint of items) {
+        const item = document.createElement('li');
+        item.className = 'sprint-card';
+        const header = document.createElement('div');
+        header.className = 'sprint-card-header';
+        const titleWrap = document.createElement('div');
+        const title = document.createElement('h2');
+        title.className = 'sprint-name';
+        title.textContent = sprint.name;
+        const meta = document.createElement('p');
+        meta.className = 'sprint-meta';
+        meta.textContent = sprint.startDate.split('-').reverse().join('/') + ' até ' + sprint.endDate.split('-').reverse().join('/');
+        titleWrap.append(title, meta);
+        const badge = document.createElement('span');
+        badge.className = 'sprint-badge';
+        badge.textContent = sprint.status === 'active' ? 'Ativa' : 'Planejada';
+        header.append(titleWrap, badge);
+        const goal = document.createElement('p');
+        goal.className = 'sprint-goal';
+        goal.textContent = sprint.goal || 'Sem objetivo definido.';
+        const sprintTasks = document.createElement('ul');
+        sprintTasks.className = 'sprint-tasks';
+        const tasks = state.tasks.filter((task) => task.projectId === state.selectedProjectId && task.sprintId === sprint.id);
+        if (tasks.length === 0) {
+          const emptyTask = document.createElement('li');
+          emptyTask.className = 'sprint-meta';
+          emptyTask.textContent = 'Nenhuma tarefa associada.';
+          sprintTasks.append(emptyTask);
+        }
+        for (const task of tasks) {
+          const taskItem = document.createElement('li');
+          taskItem.className = 'sprint-task';
+          const taskTitle = document.createElement('p');
+          taskTitle.className = 'sprint-task-title';
+          const taskId = document.createElement('strong');
+          taskId.textContent = task.id;
+          taskTitle.append(taskId, document.createTextNode(' · ' + task.title));
+          const taskActions = document.createElement('div');
+          taskActions.className = 'sprint-task-actions';
+          if (sprint.status === 'planned') {
+            const transferSelect = document.createElement('select');
+            transferSelect.className = 'task-sprint-select';
+            transferSelect.setAttribute('aria-label', 'Transferir tarefa ' + task.id);
+            transferSelect.add(new Option('Transferir para...', ''));
+            for (const target of state.sprints.filter((item) => item.projectId === state.selectedProjectId && item.status === 'planned' && item.id !== sprint.id)) {
+              transferSelect.add(new Option(target.name, target.id));
+            }
+            transferSelect.disabled = storageBlocked || transferSelect.options.length === 1;
+            transferSelect.addEventListener('change', () => {
+              if (transferSelect.value) moveTaskToSprint(task.id, transferSelect.value);
+              transferSelect.value = '';
+            });
+            taskActions.append(transferSelect);
+            const removeButton = document.createElement('button');
+            removeButton.className = 'action';
+            removeButton.type = 'button';
+            removeButton.textContent = 'Retirar';
+            removeButton.disabled = storageBlocked;
+            removeButton.addEventListener('click', () => moveTaskToSprint(task.id, null));
+            taskActions.append(removeButton);
+          }
+          taskItem.append(taskTitle, taskActions);
+          sprintTasks.append(taskItem);
+        }
+        const actions = document.createElement('div');
+        actions.className = 'sprint-actions';
+        const editButton = document.createElement('button');
+        editButton.className = 'action';
+        editButton.type = 'button';
+        editButton.textContent = 'Editar';
+        editButton.disabled = storageBlocked || sprint.status === 'active';
+        editButton.addEventListener('click', () => openSprintForm(sprint.id, editButton));
+        actions.append(editButton);
+        if (sprint.status === 'planned') {
+          const startButton = document.createElement('button');
+          startButton.className = 'action primary';
+          startButton.type = 'button';
+          startButton.textContent = 'Iniciar';
+          startButton.disabled = storageBlocked;
+          startButton.addEventListener('click', () => startSprint(sprint.id));
+          actions.append(startButton);
+        }
+        item.append(header, goal, sprintTasks, actions);
+        sprintList.append(item);
+      }
+      sprintList.hidden = items.length === 0;
+      sprintEmpty.hidden = items.length > 0;
+      document.getElementById('titulo-vazio-sprint').textContent = hasProject ? 'Nenhuma sprint planejada' : 'Nenhum projeto selecionado';
+      document.getElementById('texto-vazio-sprint').textContent = hasProject
+        ? 'As sprints do projeto aparecerão aqui, com seus objetivos e períodos de trabalho.'
+        : 'Crie ou selecione um projeto para organizar suas sprints.';
+    }
+
+    function startSprint(sprintId) {
+      const sprint = state.sprints.find((item) => item.id === sprintId);
+      if (!sprint || sprint.projectId !== state.selectedProjectId) {
+        sprintStatus.textContent = 'A sprint não pertence ao projeto selecionado.';
+        return;
+      }
+      if (sprint.status !== 'planned') {
+        sprintStatus.textContent = 'Apenas sprints planejadas podem ser iniciadas.';
+        return;
+      }
+      const activeSprint = state.sprints.find((item) => item.projectId === sprint.projectId && item.status === 'active');
+      if (activeSprint) {
+        sprintStatus.textContent = 'O projeto já possui uma sprint ativa: ' + activeSprint.name + '.';
+        return;
+      }
+      const sprints = state.sprints.map((item) => item.id === sprintId ? { ...item, status: 'active' } : item);
+      if (!saveState(copyState({ sprints }))) return;
+      renderSprints();
+      sprintStatus.textContent = 'Sprint ' + sprint.name + ' iniciada.';
+    }
+
+    function moveTaskToSprint(taskId, sprintId) {
+      const task = state.tasks.find((item) => item.id === taskId);
+      if (!task || task.projectId !== state.selectedProjectId) {
+        sprintStatus.textContent = 'A tarefa não pertence ao projeto selecionado.';
+        return;
+      }
+      let targetSprint = null;
+      if (sprintId !== null) {
+        targetSprint = state.sprints.find((sprint) => sprint.id === sprintId);
+        if (!targetSprint || targetSprint.projectId !== task.projectId || targetSprint.status !== 'planned') {
+          sprintStatus.textContent = 'Só é possível associar tarefas a sprints planejadas do mesmo projeto.';
+          renderBacklog();
+          renderSprints();
+          return;
+        }
+      }
+      const nextTasks = state.tasks.map((item) => item.id === taskId
+        ? { ...item, sprintId, order: sprintId === null ? nextBacklogOrder(task.projectId) : item.order }
+        : item);
+      if (!saveState(copyState({ tasks: nextTasks }))) return;
+      renderBacklog();
+      renderSprints();
+      sprintStatus.textContent = targetSprint
+        ? 'Tarefa ' + task.id + ' associada à sprint ' + targetSprint.name + '.'
+        : 'Tarefa ' + task.id + ' devolvida ao backlog.';
+    }
+
+    newSprintButton.addEventListener('click', () => {
+      if (state.selectedProjectId === null) return;
+      openSprintForm(null, newSprintButton);
+    });
+    document.getElementById('cancelar-sprint').addEventListener('click', () => closeSprintForm());
+    sprintName.addEventListener('input', clearSprintError);
+    sprintStart.addEventListener('input', clearSprintError);
+    sprintEnd.addEventListener('input', clearSprintError);
+    sprintForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (state.selectedProjectId === null) {
+        showSprintError('Selecione um projeto antes de criar uma sprint.', sprintName);
+        return;
+      }
+      const name = sprintName.value.trim();
+      if (!name) {
+        showSprintError('Informe um nome para a sprint.', sprintName);
+        return;
+      }
+      const startDate = sprintStart.value;
+      const endDate = sprintEnd.value;
+      if (!validDate(startDate)) {
+        showSprintError('Informe uma data de início válida.', sprintStart);
+        return;
+      }
+      if (!validDate(endDate)) {
+        showSprintError('Informe uma data de fim válida.', sprintEnd);
+        return;
+      }
+      if (endDate < startDate) {
+        showSprintError('A data final deve ser igual ou posterior à data de início.', sprintEnd);
+        return;
+      }
+      const goal = sprintGoal.value;
+      if (editingSprintId !== null) {
+        const current = state.sprints.find((item) => item.id === editingSprintId);
+        if (!current) {
+          showSprintError('A sprint não está mais disponível.', sprintName);
+          return;
+        }
+        const sprints = state.sprints.map((item) => item.id === editingSprintId
+          ? { ...item, name, goal, startDate, endDate }
+          : item);
+        if (!saveState(copyState({ sprints }))) return;
+        closeSprintForm({ restoreFocus: false });
+        renderSprints();
+        sprintStatus.textContent = 'Sprint ' + current.id + ' atualizada.';
+        return;
+      }
+      const sprint = {
+        id: createId('SP-'),
+        projectId: state.selectedProjectId,
+        name,
+        goal,
+        startDate,
+        endDate,
+        status: 'planned'
+      };
+      if (!saveState(copyState({ sprints: [...state.sprints, sprint] }))) return;
+      closeSprintForm();
+      renderSprints();
+      sprintStatus.textContent = 'Sprint ' + sprint.id + ' criada.';
+    });
     newTaskButton.addEventListener('click', () => {
       if (state.selectedProjectId === null) return;
       openTaskForm(null, newTaskButton);
@@ -604,6 +939,7 @@
       taskStatus.textContent = 'Tarefa ' + task.id + ' criada no backlog.';
     });
     renderBacklog();
+    renderSprints();
     const navigation = document.querySelector('nav');
     const screens = document.querySelectorAll('main > section');
     navigation.addEventListener('click', (event) => {

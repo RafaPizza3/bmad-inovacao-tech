@@ -66,23 +66,29 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
 
 ## Planejamento de sprints
 
-- [ ] **Tarefa 8 — Criar e editar sprints planejadas**
+- [x] **Tarefa 8 — Criar e editar sprints planejadas**
   - Capacidades: CAP-4, CAP-8. Dependências: 3. Regras: R4, R6.
   - Criar lista e formulário de sprint com nome, objetivo e datas, associada ao projeto atual.
   - Aceite: rejeitar nome vazio e período inválido; editar sprint planejada preserva seu ID; datas não mudam por conversão de fuso; sprints persistem e ficam isoladas por projeto.
   - Verificação: criar e editar sprints em dois projetos; testar fim anterior ao início e datas iguais.
 
-- [ ] **Tarefa 9 — Distribuir tarefas entre backlog e sprints**
+  - Verificação realizada: o formulário de sprint foi implementado em `index.html` com validação de nome e datas, renderização por projeto, edição preservando o ID e persistência em `localStorage` usando o mesmo fluxo de estado do restante do app. A checagem de sintaxe do JavaScript e o `git diff --check` foram executados com sucesso. Limitação: não houve navegador disponível nesta sessão para validar a interação visual real com mouse/teclado e a troca de projetos em interface gráfica.
+
+- [x] **Tarefa 9 — Distribuir tarefas entre backlog e sprints**
   - Capacidades: CAP-3, CAP-4. Dependências: 7, 8. Regras: R2, R6.
   - Adicionar controles para associar tarefas a sprints planejadas e devolvê-las ao fim do backlog.
   - Aceite: uma tarefa não aparece simultaneamente no backlog e na sprint; transferência atualiza ambas as listas e persiste; não aceita sprint de outro projeto ou encerrada.
   - Verificação: associar, transferir entre sprints planejadas e retirar tarefas; recarregar e conferir os vínculos.
 
-- [ ] **Tarefa 10 — Iniciar uma sprint**
+  - Verificação realizada: o backlog passou a oferecer seleção de sprints planejadas do projeto atual; cada sprint lista suas tarefas e permite transferir para outra sprint planejada ou retirar para o backlog. A operação centralizada valida projeto e status, atualiza `sprintId` e ordem do backlog, salva pelo fluxo persistente e renderiza as duas visões. A sintaxe JavaScript foi validada com Node e as referências dos controles foram conferidas no código. Limitação: não houve navegador disponível para executar visualmente a associação, transferência, recarga e navegação por teclado.
+
+- [x] **Tarefa 10 — Iniciar uma sprint**
   - Capacidades: CAP-6. Dependências: 9. Regras: R1, R4.
   - Implementar transição Planejada → Ativa e indicar a sprint ativa do projeto.
   - Aceite: impedir segunda sprint ativa no mesmo projeto; permitir sprint ativa independente em outro projeto; início persiste e disponibiliza as tarefas para o quadro.
   - Verificação: iniciar sprint, tentar iniciar outra no mesmo projeto e repetir em projeto diferente.
+
+  - Verificação realizada: o botão `Iniciar` altera a sprint planejada para `Ativa` e persiste a mudança; uma segunda sprint no mesmo projeto é recusada com mensagem informando a sprint ativa; outro projeto conseguiu iniciar sua própria sprint. O estado ativo permaneceu após recarregar a página. Durante o teste visual foi corrigida a atualização da tela de sprints após criar ou trocar o projeto. Sintaxe JavaScript e `git diff --check` aprovados. Limitação: o quadro ainda será implementado na tarefa 11; nesta etapa a disponibilidade é representada pelo estado ativo persistido.
 
 ## Execução e encerramento
 
