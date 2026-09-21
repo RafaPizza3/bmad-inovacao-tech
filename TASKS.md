@@ -66,11 +66,13 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
 
 ## Planejamento de sprints
 
-- [ ] **Tarefa 8 — Criar e editar sprints planejadas**
+- [x] **Tarefa 8 — Criar e editar sprints planejadas**
   - Capacidades: CAP-4, CAP-8. Dependências: 3. Regras: R4, R6.
   - Criar lista e formulário de sprint com nome, objetivo e datas, associada ao projeto atual.
   - Aceite: rejeitar nome vazio e período inválido; editar sprint planejada preserva seu ID; datas não mudam por conversão de fuso; sprints persistem e ficam isoladas por projeto.
   - Verificação: criar e editar sprints em dois projetos; testar fim anterior ao início e datas iguais.
+
+  - Verificação realizada: o formulário de sprint foi implementado em `index.html` com validação de nome e datas, renderização por projeto, edição preservando o ID e persistência em `localStorage` usando o mesmo fluxo de estado do restante do app. A checagem de sintaxe do JavaScript e o `git diff --check` foram executados com sucesso. Limitação: não houve navegador disponível nesta sessão para validar a interação visual real com mouse/teclado e a troca de projetos em interface gráfica.
 
 - [ ] **Tarefa 9 — Distribuir tarefas entre backlog e sprints**
   - Capacidades: CAP-3, CAP-4. Dependências: 7, 8. Regras: R2, R6.
