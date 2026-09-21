@@ -806,7 +806,6 @@
         description: taskDescription.value,
         priority: taskPriority.value,
         status: 'todo',
-        renderSprints();
         dueDate,
         sprintId: null,
         order: nextBacklogOrder(state.selectedProjectId)
@@ -817,12 +816,10 @@
       taskStatus.textContent = 'Tarefa ' + task.id + ' criada no backlog.';
     });
     renderBacklog();
-          closeSprintForm({ restoreFocus: false });
     renderSprints();
     const navigation = document.querySelector('nav');
     const screens = document.querySelectorAll('main > section');
     navigation.addEventListener('click', (event) => {
-        renderSprints();
       const button = event.target.closest('button[data-view]');
       if (!button) return;
       for (const screen of screens) screen.hidden = screen.id !== button.dataset.view;
