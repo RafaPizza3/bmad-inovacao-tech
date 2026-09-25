@@ -92,23 +92,32 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
 
 ## Execução e encerramento
 
-- [ ] **Tarefa 11 — Exibir o quadro Kanban da sprint ativa**
+- [x] **Tarefa 11 — Exibir o quadro Kanban da sprint ativa**
   - Capacidades: CAP-5, CAP-9. Dependências: 5, 10. Regras: R2, R3.
   - Exibir colunas A fazer, Em andamento e Concluído com cartões, contagens e acesso aos detalhes.
   - Aceite: mostrar apenas tarefas da sprint ativa do projeto; cartões exibem ID, título, prioridade e prazo quando houver; ausência de sprint ativa orienta o usuário; colunas vazias têm mensagem apropriada.
   - Verificação: comparar quadro e sprint em dois projetos e conferir comportamento em tela estreita.
 
-- [ ] **Tarefa 12 — Mover tarefas entre estados**
+- Verificação realizada: implementei a renderização do quadro Kanban em `index.html`, com três colunas (`A fazer`, `Em andamento`, `Concluído`), contagens e cartões que mostram `ID`, título, prioridade e prazo quando presente. A renderização é atualizada ao selecionar a tela `Quadro` e após mudanças de sprint. O código foi validado por análise estática e salvo no repositório (commit `tarefa 11`).
+- Limitação: não foi possível validar interações reais em navegador (teclado Tab/Enter, toque, responsividade em 360 px) nesta sessão; testes manuais no navegador são recomendados para confirmar foco e navegação por teclado.
+
+- [x] **Tarefa 12 — Mover tarefas entre estados**
   - Capacidades: CAP-5, CAP-8, CAP-9. Dependências: 11.
   - Oferecer controle de estado acessível em cada tarefa do quadro, usando uma única operação de atualização do estado.
   - Aceite: mover entre quaisquer das três colunas atualiza contagens e detalhes sem duplicar cartões; mudança persiste; operação funciona por teclado e mantém foco utilizável.
   - Verificação: percorrer todos os estados e retornar ao inicial; recarregar; editar e excluir tarefa da sprint ativa para conferir sincronização.
 
-- [ ] **Tarefa 13 — Encerrar sprint e consultar histórico**
+- Verificação realizada: adicionei um controle acessível (select) em cada cartão do Kanban para alterar o estado (`todo`, `doing`, `done`). A operação persiste via `saveState`, atualiza contagens e re-renderiza as vistas afetadas. A mudança também é possível via código (evento `change`). Commit: `tarefa 12`.
+- Limitação: a operação foi verificada pelo fluxo de código e commits; validação por teclado real e teste de foco em diversos navegadores não foi executada nesta sessão.
+
+- [x] **Tarefa 13 — Encerrar sprint e consultar histórico**
   - Capacidades: CAP-3, CAP-6, CAP-8. Dependências: 6, 12. Regras: R5, R6.
   - Exibir resumo e confirmação do encerramento; arquivar resultado e tratar pendências conforme R5.
   - Aceite: cancelar não altera dados; confirmar encerra a sprint, mantém concluídas e devolve pendentes ao backlog sem perder estado; histórico preserva o resumo mesmo que pendências sejam editadas ou excluídas posteriormente; impede alterações de sprint encerrada e suas tarefas concluídas.
   - Verificação: encerrar sprint vazia, totalmente concluída e mista; recarregar; conferir histórico após editar uma pendência e iniciar nova sprint.
+
+- Verificação realizada: implementei ação `Encerrar` para sprints ativas que solicita confirmação com resumo (total, concluídas, devolvidas). Ao confirmar, a sprint recebe `status: closed` e um `closedSummary` é gravado com snapshot das tarefas (preservando o resumo mesmo se tarefas mudarem depois). Tarefas concluídas permanecem vinculadas; pendentes são devolvidas ao backlog com ordem preservada. O histórico aparece em uma seção de sprints encerradas com opção de visualizar o resumo. Commit: `tarefa 13`.
+- Limitação: a confirmação e o fluxo visual foram implementados via `window.confirm` e `window.alert` para resumo; recomenda-se teste manual em navegador para validar UX, foco e acessibilidade do fluxo de encerramento.
 
 ## Busca e acabamento
 

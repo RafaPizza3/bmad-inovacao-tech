@@ -162,7 +162,7 @@
       <section id="quadro" aria-labelledby="titulo-quadro" hidden>
         <h1 id="titulo-quadro">Quadro</h1>
         <p class="intro">Acompanhe o trabalho da sprint, do início à conclusão.</p>
-        <div class="empty"><span class="empty-icon" aria-hidden="true">▥</span><h2>Nenhuma sprint ativa</h2><p>Quando uma sprint estiver ativa, suas tarefas aparecerão neste quadro para acompanhar o andamento.</p></div>
+        <div id="kanban-container" class="empty"><span class="empty-icon" aria-hidden="true">▥</span><h2>Nenhuma sprint ativa</h2><p>Quando uma sprint estiver ativa, suas tarefas aparecerão neste quadro para acompanhar o andamento.</p></div>
       </section>
       <section id="sprints" aria-labelledby="titulo-sprints" hidden>
         <h1 id="titulo-sprints">Sprints</h1>
@@ -751,15 +751,194 @@
           startButton.addEventListener('click', () => startSprint(sprint.id));
           actions.append(startButton);
         }
+        if (sprint.status === 'active') {
+          const closeButton = document.createElement('button');
+          closeButton.className = 'action';
+          closeButton.type = 'button';
+          closeButton.textContent = 'Encerrar';
+          closeButton.disabled = storageBlocked;
+          closeButton.addEventListener('click', () => endSprint(sprint.id));
+          actions.append(closeButton);
+        }
         item.append(header, goal, sprintTasks, actions);
         sprintList.append(item);
       }
       sprintList.hidden = items.length === 0;
       sprintEmpty.hidden = items.length > 0;
+      // closed sprints (histórico)
+      const closed = hasProject ? state.sprints.filter((s) => s.projectId === state.selectedProjectId && s.status === 'closed') : [];
+      const closedContainerId = 'lista-sprints-encerradas';
+      let closedContainer = document.getElementById(closedContainerId);
+      if (!closedContainer) {
+        closedContainer = document.createElement('div');
+        closedContainer.id = closedContainerId;
+        sprintList.parentNode.insertBefore(closedContainer, sprintList.nextSibling);
+      }
+      closedContainer.replaceChildren();
+      if (closed.length > 0) {
+        const header = document.createElement('h2');
+        header.textContent = 'Histórico de sprints encerradas';
+        closedContainer.append(header);
+        const list = document.createElement('ul');
+        list.className = 'sprint-list';
+        for (const s of closed) {
+          const item = document.createElement('li');
+          item.className = 'sprint-card';
+          const title = document.createElement('h3');
+          title.textContent = s.name + ' · Encerrada';
+          const meta = document.createElement('p');
+          meta.className = 'sprint-meta';
+          const when = s.closedSummary && s.closedSummary.date ? new Date(s.closedSummary.date).toLocaleString() : '';
+          const summaryText = s.closedSummary
+            ? `${s.closedSummary.total} tarefas · Concluídas ${s.closedSummary.done} · Devolvidas ${s.closedSummary.returned}`
+            : 'Sem resumo disponível.';
+          meta.textContent = (when ? when + ' · ' : '') + summaryText;
+          const actions = document.createElement('div');
+          actions.className = 'sprint-actions';
+          const viewButton = document.createElement('button');
+          viewButton.className = 'action';
+          viewButton.type = 'button';
+          viewButton.textContent = 'Ver resumo';
+          viewButton.addEventListener('click', () => {
+            const details = s.closedSummary ? JSON.stringify(s.closedSummary, null, 2) : 'Sem resumo.';
+            window.alert('Resumo da sprint\n\n' + details);
+          });
+          actions.append(viewButton);
+          item.append(title, meta, actions);
+          list.append(item);
+        }
+        closedContainer.append(list);
+      }
       document.getElementById('titulo-vazio-sprint').textContent = hasProject ? 'Nenhuma sprint planejada' : 'Nenhum projeto selecionado';
       document.getElementById('texto-vazio-sprint').textContent = hasProject
         ? 'As sprints do projeto aparecerão aqui, com seus objetivos e períodos de trabalho.'
         : 'Crie ou selecione um projeto para organizar suas sprints.';
+    }
+
+    function renderKanban() {
+      const container = document.getElementById('kanban-container');
+      const projectId = state.selectedProjectId;
+      if (!projectId) {
+        container.innerHTML = '<div class="empty"><span class="empty-icon" aria-hidden="true">▥</span><h2>Nenhum projeto selecionado</h2><p>Crie ou selecione um projeto para ver o quadro.</p></div>';
+        return;
+      }
+      const active = state.sprints.find((s) => s.projectId === projectId && s.status === 'active');
+      if (!active) {
+        container.innerHTML = '<div class="empty"><span class="empty-icon" aria-hidden="true">▥</span><h2>Nenhuma sprint ativa</h2><p>Quando uma sprint estiver ativa, suas tarefas aparecerão neste quadro para acompanhar o andamento.</p></div>';
+        return;
+      }
+      const cols = { todo: 'A fazer', doing: 'Em andamento', done: 'Concluído' };
+      const tasks = state.tasks.filter((t) => t.projectId === projectId && t.sprintId === active.id).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+      const wrapper = document.createElement('div');
+      wrapper.className = 'kanban-grid';
+      wrapper.style.display = 'grid';
+      wrapper.style.gridTemplateColumns = 'repeat(3, 1fr)';
+      wrapper.style.gap = '12px';
+      for (const key of ['todo', 'doing', 'done']) {
+        const column = document.createElement('div');
+        column.className = 'task-list';
+        const header = document.createElement('div');
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'baseline';
+        const h = document.createElement('h3');
+        h.textContent = cols[key];
+        const count = document.createElement('span');
+        const colTasks = tasks.filter((t) => t.status === key);
+        count.textContent = colTasks.length ? colTasks.length + '' : '0';
+        header.append(h, count);
+        column.append(header);
+        if (colTasks.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'empty';
+          empty.style.minHeight = '120px';
+          empty.innerHTML = '<p class="sprint-meta">Nenhuma tarefa nesta coluna.</p>';
+          column.append(empty);
+        } else {
+          for (const task of colTasks) {
+            const card = document.createElement('div');
+            card.className = 'task-card';
+            const idEl = document.createElement('p'); idEl.className = 'task-id'; idEl.textContent = task.id;
+            const title = document.createElement('h4'); title.className = 'task-title'; title.textContent = task.title;
+            const meta = document.createElement('p'); meta.className = 'task-meta';
+            const dueText = task.dueDate ? ' · Prazo ' + task.dueDate.split('-').reverse().join('/') : '';
+            meta.textContent = 'Prioridade ' + PRIORITY_LABELS[task.priority] + dueText;
+            const actions = document.createElement('div'); actions.className = 'task-actions';
+            const statusSelect = document.createElement('select');
+            statusSelect.setAttribute('aria-label', 'Estado da tarefa ' + task.id);
+            statusSelect.add(new Option('A fazer', 'todo'));
+            statusSelect.add(new Option('Em andamento', 'doing'));
+            statusSelect.add(new Option('Concluído', 'done'));
+            statusSelect.value = task.status;
+            statusSelect.disabled = storageBlocked || taskLocked(task);
+            statusSelect.addEventListener('change', () => moveTaskState(task.id, statusSelect.value));
+            actions.append(statusSelect);
+            const detailsBtn = document.createElement('button'); detailsBtn.className = 'action'; detailsBtn.type = 'button'; detailsBtn.textContent = 'Abrir';
+            detailsBtn.disabled = storageBlocked || taskLocked(task);
+            detailsBtn.addEventListener('click', () => openTaskForm(task.id, detailsBtn));
+            actions.append(detailsBtn);
+            const delBtn = document.createElement('button'); delBtn.className = 'action'; delBtn.type = 'button'; delBtn.textContent = 'Excluir';
+            delBtn.disabled = storageBlocked;
+            delBtn.addEventListener('click', () => deleteTask(task.id));
+            actions.append(delBtn);
+            card.append(idEl, title, meta, actions);
+            column.append(card);
+          }
+        }
+        wrapper.append(column);
+      }
+      container.replaceChildren(wrapper);
+    }
+
+    function moveTaskState(taskId, newState) {
+      const task = state.tasks.find((t) => t.id === taskId);
+      if (!task) return;
+      if (taskLocked(task)) {
+        document.getElementById('aviso-armazenamento').textContent = 'A tarefa não pode ser alterada (pertence a sprint encerrada).';
+        return;
+      }
+      const nextTasks = state.tasks.map((t) => t.id === taskId ? { ...t, status: newState } : t);
+      if (!saveState(copyState({ tasks: nextTasks }))) return;
+      renderKanban();
+      renderBacklog();
+      renderSprints();
+      document.getElementById('status-tarefa').textContent = 'Tarefa ' + taskId + ' atualizada para ' + newState + '.';
+    }
+
+    function endSprint(sprintId) {
+      const sprint = state.sprints.find((s) => s.id === sprintId);
+      if (!sprint) return;
+      if (sprint.status !== 'active') {
+        sprintStatus.textContent = 'Apenas sprints ativas podem ser encerradas.';
+        return;
+      }
+      const tasksInSprint = state.tasks.filter((t) => t.sprintId === sprintId && t.projectId === sprint.projectId);
+      const done = tasksInSprint.filter((t) => t.status === 'done');
+      const pending = tasksInSprint.filter((t) => t.status !== 'done');
+      const message = `Encerrar a sprint ${sprint.name}?\n\nTotal: ${tasksInSprint.length}\nConcluídas: ${done.length}\nA devolver ao backlog: ${pending.length}`;
+      if (!window.confirm(message)) return;
+      // snapshot summary
+      const summary = {
+        date: new Date().toISOString(),
+        total: tasksInSprint.length,
+        done: done.length,
+        returned: pending.length,
+        items: tasksInSprint.map((t) => ({ id: t.id, title: t.title, status: t.status, priority: t.priority, dueDate: t.dueDate }))
+      };
+      // update sprints and tasks
+      const nextSprints = state.sprints.map((s) => s.id === sprintId ? { ...s, status: 'closed', closedSummary: summary } : s);
+      // return pending tasks to backlog
+      let order = nextBacklogOrder(sprint.projectId);
+      const nextTasks = state.tasks.map((t) => {
+        if (t.sprintId !== sprintId) return t;
+        if (t.status === 'done') return t; // keep association for completed
+        return { ...t, sprintId: null, status: 'todo', order: order++ };
+      });
+      if (!saveState(copyState({ sprints: nextSprints, tasks: nextTasks }))) return;
+      renderSprints();
+      renderBacklog();
+      renderKanban();
+      sprintStatus.textContent = 'Sprint ' + sprint.name + ' encerrada. Resumo arquivado.';
     }
 
     function startSprint(sprintId) {
@@ -951,6 +1130,7 @@
       const title = document.getElementById(button.dataset.view).querySelector('h1').textContent;
       document.title = title + ' · Gerenciador individual';
       document.getElementById('aviso-navegacao').textContent = 'Tela ' + title + ' selecionada.';
+      if (button.dataset.view === 'quadro') renderKanban();
     });
   </script>
 </body>
