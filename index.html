@@ -651,9 +651,13 @@
         sprintSelect.setAttribute('aria-label', 'Sprint da tarefa ' + task.id);
         const noSprintOption = new Option('Associar a sprint', '');
         sprintSelect.add(noSprintOption);
-        const plannedSprints = state.sprints.filter((sprint) => sprint.projectId === state.selectedProjectId && sprint.status === 'planned');
-        for (const sprint of plannedSprints) sprintSelect.add(new Option(sprint.name, sprint.id));
-        sprintSelect.disabled = storageBlocked || plannedSprints.length === 0;
+        const availableSprints = state.sprints.filter((sprint) =>
+          sprint.projectId === state.selectedProjectId && ['planned', 'active'].includes(sprint.status));
+        for (const sprint of availableSprints) {
+          const status = sprint.status === 'active' ? 'Ativa' : 'Planejada';
+          sprintSelect.add(new Option(sprint.name + ' · ' + status, sprint.id));
+        }
+        sprintSelect.disabled = storageBlocked || availableSprints.length === 0;
         sprintSelect.addEventListener('change', () => {
           if (sprintSelect.value) moveTaskToSprint(task.id, sprintSelect.value);
           sprintSelect.value = '';
@@ -836,8 +840,10 @@
             transferSelect.className = 'task-sprint-select';
             transferSelect.setAttribute('aria-label', 'Transferir tarefa ' + task.id);
             transferSelect.add(new Option('Transferir para...', ''));
-            for (const target of state.sprints.filter((item) => item.projectId === state.selectedProjectId && item.status === 'planned' && item.id !== sprint.id)) {
-              transferSelect.add(new Option(target.name, target.id));
+            for (const target of state.sprints.filter((item) =>
+              item.projectId === state.selectedProjectId && ['planned', 'active'].includes(item.status) && item.id !== sprint.id)) {
+              const status = target.status === 'active' ? 'Ativa' : 'Planejada';
+              transferSelect.add(new Option(target.name + ' · ' + status, target.id));
             }
             transferSelect.disabled = storageBlocked || transferSelect.options.length === 1;
             transferSelect.addEventListener('change', () => {
@@ -1112,8 +1118,8 @@
       let targetSprint = null;
       if (sprintId !== null) {
         targetSprint = state.sprints.find((sprint) => sprint.id === sprintId);
-        if (!targetSprint || targetSprint.projectId !== task.projectId || targetSprint.status !== 'planned') {
-          sprintStatus.textContent = 'Só é possível associar tarefas a sprints planejadas do mesmo projeto.';
+        if (!targetSprint || targetSprint.projectId !== task.projectId || !['planned', 'active'].includes(targetSprint.status)) {
+          sprintStatus.textContent = 'Só é possível associar tarefas a sprints planejadas ou ativas do mesmo projeto.';
           renderBacklog();
           renderSprints();
           return;
