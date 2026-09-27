@@ -223,7 +223,7 @@
       filters.setAttribute('role', 'search');
       filters.setAttribute('aria-label', 'Filtrar tarefas: ' + view);
       filters.innerHTML = `
-        <div><label for="busca-${view}">Buscar por título ou ID</label><input id="busca-${view}" type="search"></div>
+        <div><label for="busca-${view}">${view === 'sprints' ? 'Buscar sprint ou tarefa por título ou ID' : 'Buscar por título ou ID'}</label><input id="busca-${view}" type="search"></div>
         <div><label for="prioridade-${view}">Prioridade</label><select id="prioridade-${view}"><option value="">Todas</option><option value="low">Baixa</option><option value="medium">Média</option><option value="high">Alta</option></select></div>
         <div><label for="estado-${view}">Estado</label><select id="estado-${view}"><option value="">Todos</option><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="done">Concluído</option></select></div>
         <button type="button" class="action">Limpar filtros</button>`;
@@ -246,10 +246,13 @@
     function hasTaskFilters(view) {
       return Object.values(taskFilters[view]).some((control) => control.value.trim() !== '');
     }
-    function filterTasks(tasks, view) {
+    function matchesQuery(id, title, query) {
+      return id.toLocaleLowerCase('pt-BR').includes(query) || title.toLocaleLowerCase('pt-BR').includes(query);
+    }
+    function filterTasks(tasks, view, searchQuery) {
       const filters = taskFilters[view];
-      const query = filters.search.value.trim().toLocaleLowerCase('pt-BR');
-      return tasks.filter((task) => (!query || task.title.toLocaleLowerCase('pt-BR').includes(query) || task.id.toLocaleLowerCase('pt-BR').includes(query)) &&
+      const query = searchQuery === undefined ? filters.search.value.trim().toLocaleLowerCase('pt-BR') : searchQuery;
+      return tasks.filter((task) => (!query || matchesQuery(task.id, task.title, query)) &&
         (!filters.priority.value || task.priority === filters.priority.value) && (!filters.status.value || task.status === filters.status.value));
     }
     const STORAGE_KEY = 'meu-trabalho.estado';
@@ -783,7 +786,10 @@
       const hasProject = state.selectedProjectId !== null;
       newSprintButton.disabled = storageBlocked || !hasProject;
       newSprintButton.hidden = !hasProject;
-      const items = hasProject ? state.sprints.filter((sprint) => sprint.projectId === state.selectedProjectId && sprint.status !== 'closed') : [];
+      const query = taskFilters.sprints.search.value.trim().toLocaleLowerCase('pt-BR');
+      const allItems = hasProject ? state.sprints.filter((sprint) => sprint.projectId === state.selectedProjectId && sprint.status !== 'closed') : [];
+      const items = allItems.filter((sprint) => !query || matchesQuery(sprint.id, sprint.name, query) || state.tasks.some((task) =>
+        task.projectId === state.selectedProjectId && task.sprintId === sprint.id && matchesQuery(task.id, task.title, query)));
       sprintList.replaceChildren();
       for (const sprint of items) {
         const item = document.createElement('li');
@@ -796,7 +802,7 @@
         title.textContent = sprint.name;
         const meta = document.createElement('p');
         meta.className = 'sprint-meta';
-        meta.textContent = sprint.startDate.split('-').reverse().join('/') + ' até ' + sprint.endDate.split('-').reverse().join('/');
+        meta.textContent = sprint.id + ' · ' + sprint.startDate.split('-').reverse().join('/') + ' até ' + sprint.endDate.split('-').reverse().join('/');
         titleWrap.append(title, meta);
         const badge = document.createElement('span');
         badge.className = 'sprint-badge';
@@ -808,7 +814,7 @@
         const sprintTasks = document.createElement('ul');
         sprintTasks.className = 'sprint-tasks';
         const allTasks = state.tasks.filter((task) => task.projectId === state.selectedProjectId && task.sprintId === sprint.id);
-        const tasks = filterTasks(allTasks, 'sprints');
+        const tasks = filterTasks(allTasks, 'sprints', matchesQuery(sprint.id, sprint.name, query) ? '' : query);
         if (tasks.length === 0) {
           const emptyTask = document.createElement('li');
           emptyTask.className = 'sprint-meta';
@@ -884,7 +890,9 @@
       sprintList.hidden = items.length === 0;
       sprintEmpty.hidden = items.length > 0;
       // closed sprints (histórico)
-      const closed = hasProject ? state.sprints.filter((s) => s.projectId === state.selectedProjectId && s.status === 'closed') : [];
+      const allClosed = hasProject ? state.sprints.filter((s) => s.projectId === state.selectedProjectId && s.status === 'closed') : [];
+      const closed = allClosed.filter((sprint) => !query || matchesQuery(sprint.id, sprint.name, query) || (sprint.closedSummary &&
+        sprint.closedSummary.items.some((task) => matchesQuery(task.id, task.title, query))));
       const closedContainerId = 'lista-sprints-encerradas';
       let closedContainer = document.getElementById(closedContainerId);
       if (!closedContainer) {
@@ -910,7 +918,7 @@
           const summaryText = s.closedSummary
             ? `${s.closedSummary.total} tarefas · Concluídas ${s.closedSummary.done} · Devolvidas ${s.closedSummary.returned}`
             : 'Sem resumo disponível.';
-          meta.textContent = (when ? when + ' · ' : '') + summaryText;
+          meta.textContent = s.id + ' · ' + (when ? when + ' · ' : '') + summaryText;
           const actions = document.createElement('div');
           actions.className = 'sprint-actions';
           const viewButton = document.createElement('button');
@@ -930,8 +938,11 @@
         }
         closedContainer.append(list);
       }
-      document.getElementById('titulo-vazio-sprint').textContent = hasProject ? 'Nenhuma sprint planejada' : 'Nenhum projeto selecionado';
-      document.getElementById('texto-vazio-sprint').textContent = hasProject
+      const noSearchResults = hasProject && query && (allItems.length > 0 || allClosed.length > 0) && items.length === 0 && closed.length === 0;
+      document.getElementById('titulo-vazio-sprint').textContent = noSearchResults ? 'Nenhuma sprint encontrada' : hasProject ? 'Nenhuma sprint planejada' : 'Nenhum projeto selecionado';
+      document.getElementById('texto-vazio-sprint').textContent = noSearchResults
+        ? 'Altere ou limpe a busca para encontrar uma sprint.'
+        : hasProject
         ? 'As sprints do projeto aparecerão aqui, com seus objetivos e períodos de trabalho.'
         : 'Crie ou selecione um projeto para organizar suas sprints.';
     }
