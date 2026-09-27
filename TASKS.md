@@ -121,11 +121,12 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
 
 ## Busca e acabamento
 
-- [ ] **Tarefa 14 — Buscar e filtrar tarefas**
+- [x] **Tarefa 14 — Buscar e filtrar tarefas**
   - Capacidades: CAP-7. Dependências: 13.
   - Implementar busca por título/ID e filtros combinados de prioridade e estado nas listas de tarefas e no quadro.
   - Aceite: busca ignora diferenças entre maiúsculas e minúsculas; filtros respeitam projeto e visão; limpar restaura a lista; distinguir ausência de dados de ausência de resultados; reordenação do backlog fica desabilitada enquanto houver filtro para evitar ordem ambígua.
   - Verificação: combinar busca e filtros, limpar, trocar projeto e conferir que nenhum resultado pertence a outro contexto.
+  - Verificação realizada: Playwright com Edge 154.0.4258.37, perfil isolado e dados fictícios de dois projetos; busca por título e ID sem distinção de caixa, combinação de prioridade/estado, limpeza, filtros independentes nas três visões, troca de projeto no quadro, ausência de resultados e bloqueio visual/programático da reordenação aprovados. Nenhum erro JavaScript no percurso; sintaxe e diff verificados. Limitação: histórico mantém o resumo integral do encerramento, sem aplicar filtros ao snapshot.
 
 - [ ] **Tarefa 15 — Revisar responsividade e acessibilidade dos fluxos**
   - Capacidades: CAP-9. Dependências: 14.

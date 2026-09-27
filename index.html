@@ -76,6 +76,9 @@
     .task-meta { margin: 0; color: #536078; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
     .task-desc { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
     .task-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .task-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 20px 0; }
+    .task-filters > div { flex: 1 1 160px; min-width: 0; }
+    .task-filters input { width: 100%; min-width: 0; padding: 10px; border: 1px solid #9baac3; border-radius: 7px; }
     [hidden] { display: none !important; }
     @media (max-width: 680px) {
       .app { grid-template-columns: minmax(0, 1fr); }
@@ -203,6 +206,42 @@
   </div>
   <script>
     'use strict';
+    const taskFilters = {};
+    for (const view of ['backlog', 'quadro', 'sprints']) {
+      const filters = document.createElement('div');
+      filters.className = 'task-filters';
+      filters.setAttribute('role', 'search');
+      filters.setAttribute('aria-label', 'Filtrar tarefas: ' + view);
+      filters.innerHTML = `
+        <div><label for="busca-${view}">Buscar por título ou ID</label><input id="busca-${view}" type="search"></div>
+        <div><label for="prioridade-${view}">Prioridade</label><select id="prioridade-${view}"><option value="">Todas</option><option value="low">Baixa</option><option value="medium">Média</option><option value="high">Alta</option></select></div>
+        <div><label for="estado-${view}">Estado</label><select id="estado-${view}"><option value="">Todos</option><option value="todo">A fazer</option><option value="doing">Em andamento</option><option value="done">Concluído</option></select></div>
+        <button type="button" class="action">Limpar filtros</button>`;
+      document.querySelector('#' + view + ' .intro').after(filters);
+      taskFilters[view] = { search: filters.querySelector('input'), priority: filters.querySelectorAll('select')[0], status: filters.querySelectorAll('select')[1] };
+      const refresh = () => ({ backlog: renderBacklog, quadro: renderKanban, sprints: renderSprints })[view]();
+      filters.addEventListener('input', refresh);
+      filters.querySelector('button').addEventListener('click', () => {
+        for (const control of Object.values(taskFilters[view])) control.value = '';
+        refresh();
+        taskFilters[view].search.focus();
+      });
+      if (view === 'backlog') {
+        const note = document.createElement('p');
+        note.className = 'task-meta';
+        note.textContent = 'Limpe os filtros para habilitar a ordenação manual.';
+        filters.after(note);
+      }
+    }
+    function hasTaskFilters(view) {
+      return Object.values(taskFilters[view]).some((control) => control.value.trim() !== '');
+    }
+    function filterTasks(tasks, view) {
+      const filters = taskFilters[view];
+      const query = filters.search.value.trim().toLocaleLowerCase('pt-BR');
+      return tasks.filter((task) => (!query || task.title.toLocaleLowerCase('pt-BR').includes(query) || task.id.toLocaleLowerCase('pt-BR').includes(query)) &&
+        (!filters.priority.value || task.priority === filters.priority.value) && (!filters.status.value || task.status === filters.status.value));
+    }
     const STORAGE_KEY = 'meu-trabalho.estado';
     const DATA_VERSION = 1;
     let storageBlocked = false;
@@ -388,6 +427,7 @@
       renderProjects();
       renderBacklog();
       renderSprints();
+      renderKanban();
       closeProjectForm();
       document.getElementById('status-projeto').textContent = renaming ? 'Projeto renomeado.' : 'Projeto criado e selecionado.';
     });
@@ -404,6 +444,7 @@
       renderProjects();
       renderBacklog();
       renderSprints();
+      renderKanban();
     });
     renderProjects();
     const newTaskButton = document.getElementById('nova-tarefa');
@@ -491,6 +532,7 @@
       newTaskButton.focus();
     }
     function reorderTask(taskId, direction) {
+      if (hasTaskFilters('backlog')) return;
       const tasks = backlogTasks();
       const currentIndex = tasks.findIndex((task) => task.id === taskId);
       const targetIndex = currentIndex + direction;
@@ -511,7 +553,8 @@
       const hasProject = state.selectedProjectId !== null;
       newTaskButton.disabled = storageBlocked || !hasProject;
       newTaskButton.hidden = !hasProject;
-      const tasks = hasProject ? backlogTasks() : [];
+      const allTasks = hasProject ? backlogTasks() : [];
+      const tasks = filterTasks(allTasks, 'backlog');
       taskList.replaceChildren();
       for (const task of tasks) {
         const item = document.createElement('li');
@@ -572,7 +615,7 @@
         moveUpButton.type = 'button';
         moveUpButton.textContent = 'Subir';
         moveUpButton.setAttribute('aria-label', 'Subir ' + task.id + ' no backlog');
-        moveUpButton.disabled = storageBlocked || taskIndex === 0;
+        moveUpButton.disabled = storageBlocked || hasTaskFilters('backlog') || taskIndex === 0;
         moveUpButton.dataset.taskId = task.id;
         moveUpButton.dataset.reorder = 'up';
         moveUpButton.addEventListener('click', () => reorderTask(task.id, -1));
@@ -582,7 +625,7 @@
         moveDownButton.type = 'button';
         moveDownButton.textContent = 'Descer';
         moveDownButton.setAttribute('aria-label', 'Descer ' + task.id + ' no backlog');
-        moveDownButton.disabled = storageBlocked || taskIndex === tasks.length - 1;
+        moveDownButton.disabled = storageBlocked || hasTaskFilters('backlog') || taskIndex === tasks.length - 1;
         moveDownButton.dataset.taskId = task.id;
         moveDownButton.dataset.reorder = 'down';
         moveDownButton.addEventListener('click', () => reorderTask(task.id, 1));
@@ -598,6 +641,10 @@
       document.getElementById('texto-vazio-backlog').textContent = hasProject
         ? 'Nenhuma tarefa por enquanto. As tarefas do projeto aparecerão aqui para você organizar suas prioridades.'
         : 'Crie ou selecione um projeto para registrar tarefas no backlog.';
+      if (allTasks.length && !tasks.length) {
+        document.getElementById('titulo-vazio-backlog').textContent = 'Nenhum resultado';
+        document.getElementById('texto-vazio-backlog').textContent = 'Altere ou limpe os filtros para encontrar tarefas.';
+      }
     }
 
     const newSprintButton = document.getElementById('nova-sprint');
@@ -691,11 +738,12 @@
         goal.textContent = sprint.goal || 'Sem objetivo definido.';
         const sprintTasks = document.createElement('ul');
         sprintTasks.className = 'sprint-tasks';
-        const tasks = state.tasks.filter((task) => task.projectId === state.selectedProjectId && task.sprintId === sprint.id);
+        const allTasks = state.tasks.filter((task) => task.projectId === state.selectedProjectId && task.sprintId === sprint.id);
+        const tasks = filterTasks(allTasks, 'sprints');
         if (tasks.length === 0) {
           const emptyTask = document.createElement('li');
           emptyTask.className = 'sprint-meta';
-          emptyTask.textContent = 'Nenhuma tarefa associada.';
+          emptyTask.textContent = allTasks.length ? 'Nenhum resultado para os filtros nesta sprint.' : 'Nenhuma tarefa associada.';
           sprintTasks.append(emptyTask);
         }
         for (const task of tasks) {
@@ -844,7 +892,8 @@
         const h = document.createElement('h3');
         h.textContent = cols[key];
         const count = document.createElement('span');
-        const colTasks = tasks.filter((t) => t.status === key);
+        const allColTasks = tasks.filter((t) => t.status === key);
+        const colTasks = filterTasks(allColTasks, 'quadro');
         count.textContent = colTasks.length ? colTasks.length + '' : '0';
         header.append(h, count);
         column.append(header);
@@ -852,7 +901,10 @@
           const empty = document.createElement('div');
           empty.className = 'empty';
           empty.style.minHeight = '120px';
-          empty.innerHTML = '<p class="sprint-meta">Nenhuma tarefa nesta coluna.</p>';
+          const message = document.createElement('p');
+          message.className = 'sprint-meta';
+          message.textContent = allColTasks.length ? 'Nenhum resultado para os filtros nesta coluna.' : 'Nenhuma tarefa nesta coluna.';
+          empty.append(message);
           column.append(empty);
         } else {
           for (const task of colTasks) {
