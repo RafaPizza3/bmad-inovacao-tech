@@ -8,7 +8,17 @@
     :root { color-scheme: light; font-family: system-ui, sans-serif; color: #24324a; background: #f5f7fb; }
     * { box-sizing: border-box; }
     body { margin: 0; }
-    button, select, input { font: inherit; }
+    button, select, input, textarea { font: inherit; }
+    button, select, input, textarea { max-width: 100%; }
+    h1, h2, h3, p, button { overflow-wrap: anywhere; }
+    .app > *, .task-card, .task-list, .sprint-card, .sprint-card-header > *, .task-actions, .sprint-task-actions { min-width: 0; }
+    .kanban-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
+    #kanban-container { margin-top: 24px; }
+    .task-list { align-content: start; }
+    dialog { width: min(620px, calc(100% - 32px)); max-height: calc(100dvh - 32px); padding: 0; border: 1px solid #9baac3; border-radius: 14px; color: inherit; }
+    dialog::backdrop { background: rgb(20 30 50 / 45%); }
+    dialog .task-form { border: 0; }
+    @media (max-width: 1100px) { .kanban-grid { grid-template-columns: minmax(0, 1fr); } }
     :focus-visible { outline: 3px solid #125acd; outline-offset: 4px; }
     .skip { position: fixed; top: 12px; left: 12px; padding: 12px; background: white; z-index: 2; transform: translateY(-160%); }
     .skip:focus { transform: translateY(0); }
@@ -165,7 +175,7 @@
       <section id="quadro" aria-labelledby="titulo-quadro" hidden>
         <h1 id="titulo-quadro">Quadro</h1>
         <p class="intro">Acompanhe o trabalho da sprint, do início à conclusão.</p>
-        <div id="kanban-container" class="empty"><span class="empty-icon" aria-hidden="true">▥</span><h2>Nenhuma sprint ativa</h2><p>Quando uma sprint estiver ativa, suas tarefas aparecerão neste quadro para acompanhar o andamento.</p></div>
+        <div id="kanban-container"><span class="empty-icon" aria-hidden="true">▥</span><h2>Nenhuma sprint ativa</h2><p>Quando uma sprint estiver ativa, suas tarefas aparecerão neste quadro para acompanhar o andamento.</p></div>
       </section>
       <section id="sprints" aria-labelledby="titulo-sprints" hidden>
         <h1 id="titulo-sprints">Sprints</h1>
@@ -449,6 +459,32 @@
     renderProjects();
     const newTaskButton = document.getElementById('nova-tarefa');
     const taskForm = document.getElementById('form-tarefa');
+    const taskDialog = document.createElement('dialog');
+    taskDialog.setAttribute('aria-label', 'Detalhes da tarefa');
+    document.getElementById('conteudo').append(taskDialog);
+    taskDialog.append(taskForm);
+    taskDialog.addEventListener('cancel', (event) => { event.preventDefault(); closeTaskForm(); });
+    for (const [fieldId, errorId] of [['prazo-tarefa', 'erro-tarefa'], ['prioridade-tarefa', 'erro-tarefa'], ['inicio-sprint', 'erro-sprint'], ['fim-sprint', 'erro-sprint']]) {
+      document.getElementById(fieldId).setAttribute('aria-describedby', errorId);
+    }
+    for (const id of ['erro-projeto', 'erro-tarefa', 'erro-sprint']) document.getElementById(id).setAttribute('role', 'alert');
+    function focusVisible(target) {
+      if (target && target.isConnected && !target.disabled && target.getClientRects().length) { target.focus(); return; }
+      const heading = document.querySelector('main > section:not([hidden]) h1');
+      heading.setAttribute('tabindex', '-1');
+      heading.focus();
+    }
+    function refreshTaskViews() {
+      const focused = document.activeElement;
+      const focusKey = focused.dataset.focusKey;
+      renderBacklog(); renderSprints(); renderKanban();
+      if (focused.isConnected) return;
+      focusVisible(focusKey ? document.querySelector('[data-focus-key="' + CSS.escape(focusKey) + '"]') : null);
+    }
+    function announceTask(message) {
+      taskStatus.textContent = message;
+      document.getElementById('aviso-navegacao').textContent = message;
+    }
     const taskTitle = document.getElementById('titulo-tarefa');
     const taskDescription = document.getElementById('descricao-tarefa');
     const taskPriority = document.getElementById('prioridade-tarefa');
@@ -471,6 +507,7 @@
       taskError.textContent = '';
       taskTitle.removeAttribute('aria-invalid');
       taskDue.removeAttribute('aria-invalid');
+      taskPriority.removeAttribute('aria-invalid');
     }
     function resetTaskForm() {
       taskForm.reset();
@@ -483,11 +520,12 @@
     function closeTaskForm(options) {
       const trigger = taskTrigger;
       taskForm.hidden = true;
+      if (taskDialog.open) taskDialog.close();
       editingTaskId = null;
       resetTaskForm();
       if (options && options.restoreFocus === false) return;
-      const focusTarget = trigger && !trigger.hidden && !trigger.disabled ? trigger : newTaskButton;
-      if (!focusTarget.hidden && !focusTarget.disabled) focusTarget.focus();
+      const replacement = trigger && trigger.dataset.focusKey ? document.querySelector('[data-focus-key="' + CSS.escape(trigger.dataset.focusKey) + '"]') : null;
+      focusVisible(replacement || trigger || newTaskButton);
     }
     function openTaskForm(taskId, trigger) {
       editingTaskId = taskId;
@@ -506,6 +544,7 @@
         taskSave.textContent = 'Salvar';
       }
       taskForm.hidden = false;
+      taskDialog.showModal();
       taskTitle.focus();
     }
     function showTaskError(message, field) {
@@ -527,9 +566,8 @@
       const tasks = state.tasks.filter((item) => item.id !== taskId);
       if (!saveState(copyState({ tasks }))) return;
       if (editingTaskId === taskId) closeTaskForm({ restoreFocus: false });
-      renderBacklog();
-      taskStatus.textContent = 'Tarefa ' + task.id + ' excluída.';
-      newTaskButton.focus();
+      refreshTaskViews();
+      announceTask('Tarefa ' + task.id + ' excluída.');
     }
     function reorderTask(taskId, direction) {
       if (hasTaskFilters('backlog')) return;
@@ -592,6 +630,7 @@
         detailsButton.className = 'action';
         detailsButton.type = 'button';
         detailsButton.dataset.taskId = task.id;
+        detailsButton.dataset.focusKey = 'backlog-details-' + task.id;
         detailsButton.textContent = 'Abrir detalhes';
         detailsButton.disabled = storageBlocked;
         detailsButton.addEventListener('click', () => {
@@ -679,8 +718,7 @@
       editingSprintId = null;
       resetSprintForm();
       if (options && options.restoreFocus === false) return;
-      const trigger = sprintTrigger && !sprintTrigger.hidden && !sprintTrigger.disabled ? sprintTrigger : newSprintButton;
-      if (!trigger.hidden && !trigger.disabled) trigger.focus();
+      focusVisible(sprintTrigger && sprintTrigger.isConnected ? sprintTrigger : newSprintButton);
     }
 
     function openSprintForm(sprintId, trigger) {
@@ -786,6 +824,7 @@
         const editButton = document.createElement('button');
         editButton.className = 'action';
         editButton.type = 'button';
+        editButton.dataset.focusKey = 'sprint-edit-' + sprint.id;
         editButton.textContent = 'Editar';
         editButton.disabled = storageBlocked || sprint.status === 'active';
         editButton.addEventListener('click', () => openSprintForm(sprint.id, editButton));
@@ -880,7 +919,6 @@
       const wrapper = document.createElement('div');
       wrapper.className = 'kanban-grid';
       wrapper.style.display = 'grid';
-      wrapper.style.gridTemplateColumns = 'repeat(3, 1fr)';
       wrapper.style.gap = '12px';
       for (const key of ['todo', 'doing', 'done']) {
         const column = document.createElement('div');
@@ -918,6 +956,7 @@
             const actions = document.createElement('div'); actions.className = 'task-actions';
             const statusSelect = document.createElement('select');
             statusSelect.setAttribute('aria-label', 'Estado da tarefa ' + task.id);
+            statusSelect.dataset.focusKey = 'quadro-state-' + task.id;
             statusSelect.add(new Option('A fazer', 'todo'));
             statusSelect.add(new Option('Em andamento', 'doing'));
             statusSelect.add(new Option('Concluído', 'done'));
@@ -926,6 +965,7 @@
             statusSelect.addEventListener('change', () => moveTaskState(task.id, statusSelect.value));
             actions.append(statusSelect);
             const detailsBtn = document.createElement('button'); detailsBtn.className = 'action'; detailsBtn.type = 'button'; detailsBtn.textContent = 'Abrir';
+            detailsBtn.dataset.focusKey = 'quadro-details-' + task.id;
             detailsBtn.disabled = storageBlocked || taskLocked(task);
             detailsBtn.addEventListener('click', () => openTaskForm(task.id, detailsBtn));
             actions.append(detailsBtn);
@@ -950,11 +990,13 @@
         return;
       }
       const nextTasks = state.tasks.map((t) => t.id === taskId ? { ...t, status: newState } : t);
-      if (!saveState(copyState({ tasks: nextTasks }))) return;
-      renderKanban();
-      renderBacklog();
-      renderSprints();
-      document.getElementById('status-tarefa').textContent = 'Tarefa ' + taskId + ' atualizada para ' + newState + '.';
+      if (!saveState(copyState({ tasks: nextTasks }))) {
+        const control = document.querySelector('[data-focus-key="quadro-state-' + CSS.escape(taskId) + '"]');
+        if (control) control.value = task.status;
+        return;
+      }
+      refreshTaskViews();
+      announceTask('Tarefa ' + taskId + ' atualizada para ' + ({ todo: 'A fazer', doing: 'Em andamento', done: 'Concluído' })[newState] + '.');
     }
 
     function endSprint(sprintId) {
@@ -987,9 +1029,7 @@
         return { ...t, sprintId: null, status: 'todo', order: order++ };
       });
       if (!saveState(copyState({ sprints: nextSprints, tasks: nextTasks }))) return;
-      renderSprints();
-      renderBacklog();
-      renderKanban();
+      refreshTaskViews();
       sprintStatus.textContent = 'Sprint ' + sprint.name + ' encerrada. Resumo arquivado.';
     }
 
@@ -1010,7 +1050,7 @@
       }
       const sprints = state.sprints.map((item) => item.id === sprintId ? { ...item, status: 'active' } : item);
       if (!saveState(copyState({ sprints }))) return;
-      renderSprints();
+      refreshTaskViews();
       sprintStatus.textContent = 'Sprint ' + sprint.name + ' iniciada.';
     }
 
@@ -1034,11 +1074,11 @@
         ? { ...item, sprintId, order: sprintId === null ? nextBacklogOrder(task.projectId) : item.order }
         : item);
       if (!saveState(copyState({ tasks: nextTasks }))) return;
-      renderBacklog();
-      renderSprints();
+      refreshTaskViews();
       sprintStatus.textContent = targetSprint
         ? 'Tarefa ' + task.id + ' associada à sprint ' + targetSprint.name + '.'
         : 'Tarefa ' + task.id + ' devolvida ao backlog.';
+      document.getElementById('aviso-navegacao').textContent = sprintStatus.textContent;
     }
 
     newSprintButton.addEventListener('click', () => {
@@ -1087,6 +1127,7 @@
         if (!saveState(copyState({ sprints }))) return;
         closeSprintForm({ restoreFocus: false });
         renderSprints();
+        focusVisible(document.querySelector('[data-focus-key="sprint-edit-' + CSS.escape(current.id) + '"]'));
         sprintStatus.textContent = 'Sprint ' + current.id + ' atualizada.';
         return;
       }
@@ -1101,7 +1142,7 @@
       };
       if (!saveState(copyState({ sprints: [...state.sprints, sprint] }))) return;
       closeSprintForm();
-      renderSprints();
+      refreshTaskViews();
       sprintStatus.textContent = 'Sprint ' + sprint.id + ' criada.';
     });
     newTaskButton.addEventListener('click', () => {
@@ -1146,11 +1187,9 @@
           : item);
         if (!saveState(copyState({ tasks }))) return;
         const savedId = current.id;
-        closeTaskForm({ restoreFocus: false });
-        renderBacklog();
-        const savedButton = taskList.querySelector('[data-task-id="' + CSS.escape(savedId) + '"]');
-        (savedButton || newTaskButton).focus();
-        taskStatus.textContent = 'Tarefa ' + savedId + ' atualizada.';
+        refreshTaskViews();
+        closeTaskForm();
+        announceTask('Tarefa ' + savedId + ' atualizada.');
         return;
       }
       const task = {

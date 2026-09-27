@@ -128,11 +128,12 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
   - Verificação: combinar busca e filtros, limpar, trocar projeto e conferir que nenhum resultado pertence a outro contexto.
   - Verificação realizada: Playwright com Edge 154.0.4258.37, perfil isolado e dados fictícios de dois projetos; busca por título e ID sem distinção de caixa, combinação de prioridade/estado, limpeza, filtros independentes nas três visões, troca de projeto no quadro, ausência de resultados e bloqueio visual/programático da reordenação aprovados. Nenhum erro JavaScript no percurso; sintaxe e diff verificados. Limitação: histórico mantém o resumo integral do encerramento, sem aplicar filtros ao snapshot.
 
-- [ ] **Tarefa 15 — Revisar responsividade e acessibilidade dos fluxos**
+- [x] **Tarefa 15 — Revisar responsividade e acessibilidade dos fluxos**
   - Capacidades: CAP-9. Dependências: 14.
   - Ajustar formulários, cartões, navegação, feedback e eventuais diálogos em todos os fluxos implementados.
   - Aceite: todas as ações principais funcionam por teclado; campos têm rótulos; erros são associados aos campos; diálogos devolvem foco ao fechar; cores não são o único indicador de estado; conteúdo não se sobrepõe em 360 px nem com zoom de 200%.
   - Verificação: percorrer criação de tarefa e mudança de estado sem mouse; testar telas estreita e desktop, zoom e mensagens de erro.
+  - Verificação realizada: Edge 154.0.4258.37 via Playwright, perfil isolado; criação de projeto/tarefa com Enter/Tab, mudança de estado com setas e manutenção do foco, erro de título e período com associação ao campo, detalhes do quadro em diálogo, Escape/Salvar com retorno de foco e atualização do cartão aprovados. As três telas e o diálogo não apresentaram transbordamento horizontal em 360/1280 px e ampliação CSS de 200%, inclusive com título de 150 caracteres sem espaços. Corrigido também o seletor do backlog desatualizado após criar sprint. Limitações: ampliação testada por CSS, não pelo menu de zoom do navegador; sem leitor de tela ou validação em outros navegadores.
 
 - [ ] **Tarefa 16 — Validar o ciclo completo e corrigir falhas de integração**
   - Capacidades: CAP-1 a CAP-9. Dependências: 15.
