@@ -284,6 +284,21 @@
           if (activeProjects.has(sprint.projectId)) return false;
           activeProjects.add(sprint.projectId);
         }
+        if (sprint.closedSummary !== undefined) {
+          const summary = sprint.closedSummary;
+          if (sprint.status !== 'closed' || !isRecord(summary) || !Array.isArray(summary.items) ||
+              typeof summary.date !== 'string' || !Number.isFinite(Date.parse(summary.date)) ||
+              !['total', 'done', 'returned'].every((key) => Number.isSafeInteger(summary[key]) && summary[key] >= 0) ||
+              summary.total !== summary.items.length || summary.done + summary.returned !== summary.total) return false;
+          const snapshotIds = new Set();
+          for (const item of summary.items) {
+            if (!isRecord(item) || !isText(item.id) || snapshotIds.has(item.id) || !isText(item.title) ||
+                !['todo', 'doing', 'done'].includes(item.status) || !['low', 'medium', 'high'].includes(item.priority) ||
+                !(item.dueDate === null || validDate(item.dueDate))) return false;
+            snapshotIds.add(item.id);
+          }
+          if (summary.done !== summary.items.filter((item) => item.status === 'done').length) return false;
+        }
       }
       for (const task of value.tasks) {
         if (!projectIds.has(task.projectId) || !isText(task.title) || typeof task.description !== 'string' ||
@@ -292,6 +307,7 @@
             !Number.isSafeInteger(task.order) || task.order < 0) return false;
         if (task.sprintId !== null && !value.sprints.some((sprint) =>
           sprint.id === task.sprintId && sprint.projectId === task.projectId)) return false;
+        if (task.sprintId !== null && task.status !== 'done' && value.sprints.some((sprint) => sprint.id === task.sprintId && sprint.status === 'closed')) return false;
       }
       return true;
     }
@@ -299,6 +315,11 @@
       const notice = document.getElementById('aviso-armazenamento');
       notice.textContent = message;
       notice.hidden = !message;
+      const dialogError = document.querySelector('dialog[open] #erro-tarefa');
+      if (dialogError) {
+        dialogError.textContent = message;
+        dialogError.hidden = !message;
+      }
     }
     function loadState() {
       try {
@@ -353,6 +374,7 @@
       return id;
     }
     const PRIORITY_LABELS = { low: 'Baixa', medium: 'Média', high: 'Alta' };
+    const STATUS_LABELS = { todo: 'A fazer', doing: 'Em andamento', done: 'Concluído' };
     function copyState(extra) {
       return { ...JSON.parse(JSON.stringify(state)), ...extra };
     }
@@ -434,6 +456,10 @@
         ? state.projects.map((project) => project.id === id ? { ...project, name } : project)
         : [...state.projects, { id, name }];
       if (!saveState(copyState({ projects, selectedProjectId: renaming ? state.selectedProjectId : id }))) return;
+      if (!renaming) {
+        closeTaskForm({ restoreFocus: false });
+        closeSprintForm({ restoreFocus: false });
+      }
       renderProjects();
       renderBacklog();
       renderSprints();
@@ -528,6 +554,10 @@
       focusVisible(replacement || trigger || newTaskButton);
     }
     function openTaskForm(taskId, trigger) {
+      if (taskId !== null) {
+        const task = state.tasks.find((item) => item.id === taskId && item.projectId === state.selectedProjectId);
+        if (!task || taskLocked(task)) { announceTask('Esta tarefa não está disponível para edição.'); return; }
+      }
       editingTaskId = taskId;
       taskTrigger = trigger;
       resetTaskForm();
@@ -557,8 +587,8 @@
     }
     function deleteTask(taskId) {
       const task = state.tasks.find((item) => item.id === taskId);
-      if (!task) {
-        taskStatus.textContent = 'A tarefa não está mais disponível.';
+      if (!task || task.projectId !== state.selectedProjectId || taskLocked(task)) {
+        announceTask('Esta tarefa não está disponível para exclusão.');
         return;
       }
       const confirmed = window.confirm('Excluir a tarefa ' + task.id + ' — ' + task.title + '?');
@@ -606,7 +636,7 @@
         const meta = document.createElement('p');
         meta.className = 'task-meta';
         const dueText = task.dueDate ? ' · Prazo ' + task.dueDate.split('-').reverse().join('/') : '';
-        meta.textContent = 'Prioridade ' + PRIORITY_LABELS[task.priority] + ' · A fazer' + dueText;
+        meta.textContent = 'Prioridade ' + PRIORITY_LABELS[task.priority] + ' · ' + STATUS_LABELS[task.status] + dueText;
         const description = document.createElement('p');
         description.className = 'task-desc';
         description.textContent = task.description;
@@ -722,6 +752,7 @@
     }
 
     function openSprintForm(sprintId, trigger) {
+      if (sprintId !== null && !state.sprints.some((sprint) => sprint.id === sprintId && sprint.projectId === state.selectedProjectId && sprint.status === 'planned')) return;
       editingSprintId = sprintId;
       sprintTrigger = trigger;
       resetSprintForm();
@@ -887,7 +918,10 @@
           viewButton.type = 'button';
           viewButton.textContent = 'Ver resumo';
           viewButton.addEventListener('click', () => {
-            const details = s.closedSummary ? JSON.stringify(s.closedSummary, null, 2) : 'Sem resumo.';
+            const details = s.closedSummary
+              ? `${s.name}\nTotal: ${s.closedSummary.total} · Concluídas: ${s.closedSummary.done} · Devolvidas: ${s.closedSummary.returned}\n\n` +
+                s.closedSummary.items.map((item) => `${item.id} · ${item.title} · ${STATUS_LABELS[item.status]}`).join('\n')
+              : 'Sem resumo.';
             window.alert('Resumo da sprint\n\n' + details);
           });
           actions.append(viewButton);
@@ -984,9 +1018,9 @@
 
     function moveTaskState(taskId, newState) {
       const task = state.tasks.find((t) => t.id === taskId);
-      if (!task) return;
-      if (taskLocked(task)) {
-        document.getElementById('aviso-armazenamento').textContent = 'A tarefa não pode ser alterada (pertence a sprint encerrada).';
+      if (!task || task.projectId !== state.selectedProjectId || !Object.hasOwn(STATUS_LABELS, newState) ||
+          !state.sprints.some((sprint) => sprint.id === task.sprintId && sprint.status === 'active' && sprint.projectId === task.projectId)) {
+        announceTask('Só é possível alterar o estado de tarefas da sprint ativa deste projeto.');
         return;
       }
       const nextTasks = state.tasks.map((t) => t.id === taskId ? { ...t, status: newState } : t);
@@ -996,12 +1030,12 @@
         return;
       }
       refreshTaskViews();
-      announceTask('Tarefa ' + taskId + ' atualizada para ' + ({ todo: 'A fazer', doing: 'Em andamento', done: 'Concluído' })[newState] + '.');
+      announceTask('Tarefa ' + taskId + ' atualizada para ' + STATUS_LABELS[newState] + '.');
     }
 
     function endSprint(sprintId) {
       const sprint = state.sprints.find((s) => s.id === sprintId);
-      if (!sprint) return;
+      if (!sprint || sprint.projectId !== state.selectedProjectId) return;
       if (sprint.status !== 'active') {
         sprintStatus.textContent = 'Apenas sprints ativas podem ser encerradas.';
         return;
@@ -1026,7 +1060,7 @@
       const nextTasks = state.tasks.map((t) => {
         if (t.sprintId !== sprintId) return t;
         if (t.status === 'done') return t; // keep association for completed
-        return { ...t, sprintId: null, status: 'todo', order: order++ };
+        return { ...t, sprintId: null, order: order++ };
       });
       if (!saveState(copyState({ sprints: nextSprints, tasks: nextTasks }))) return;
       refreshTaskViews();
@@ -1058,6 +1092,10 @@
       const task = state.tasks.find((item) => item.id === taskId);
       if (!task || task.projectId !== state.selectedProjectId) {
         sprintStatus.textContent = 'A tarefa não pertence ao projeto selecionado.';
+        return;
+      }
+      if (task.sprintId !== null && !state.sprints.some((sprint) => sprint.id === task.sprintId && sprint.status === 'planned')) {
+        announceTask('Só é possível transferir tarefas do backlog ou de sprints planejadas.');
         return;
       }
       let targetSprint = null;
@@ -1117,7 +1155,7 @@
       const goal = sprintGoal.value;
       if (editingSprintId !== null) {
         const current = state.sprints.find((item) => item.id === editingSprintId);
-        if (!current) {
+        if (!current || current.projectId !== state.selectedProjectId || current.status !== 'planned') {
           showSprintError('A sprint não está mais disponível.', sprintName);
           return;
         }
@@ -1126,7 +1164,7 @@
           : item);
         if (!saveState(copyState({ sprints }))) return;
         closeSprintForm({ restoreFocus: false });
-        renderSprints();
+        refreshTaskViews();
         focusVisible(document.querySelector('[data-focus-key="sprint-edit-' + CSS.escape(current.id) + '"]'));
         sprintStatus.textContent = 'Sprint ' + current.id + ' atualizada.';
         return;
@@ -1174,7 +1212,7 @@
       }
       if (editingTaskId !== null) {
         const current = state.tasks.find((item) => item.id === editingTaskId);
-        if (!current) {
+        if (!current || current.projectId !== state.selectedProjectId) {
           showTaskError('A tarefa não está mais disponível.');
           return;
         }
