@@ -121,26 +121,29 @@ Planejamento baseado em [SPEC.md](SPEC.md). Todas as tarefas de implementação 
 
 ## Busca e acabamento
 
-- [ ] **Tarefa 14 — Buscar e filtrar tarefas**
+- [x] **Tarefa 14 — Buscar e filtrar tarefas**
   - Capacidades: CAP-7. Dependências: 13.
   - Implementar busca por título/ID e filtros combinados de prioridade e estado nas listas de tarefas e no quadro.
   - Aceite: busca ignora diferenças entre maiúsculas e minúsculas; filtros respeitam projeto e visão; limpar restaura a lista; distinguir ausência de dados de ausência de resultados; reordenação do backlog fica desabilitada enquanto houver filtro para evitar ordem ambígua.
   - Verificação: combinar busca e filtros, limpar, trocar projeto e conferir que nenhum resultado pertence a outro contexto.
+  - Verificação realizada: Playwright com Edge 154.0.4258.37, perfil isolado e dados fictícios de dois projetos; busca por título e ID sem distinção de caixa, combinação de prioridade/estado, limpeza, filtros independentes nas três visões, troca de projeto no quadro, ausência de resultados e bloqueio visual/programático da reordenação aprovados. Nenhum erro JavaScript no percurso; sintaxe e diff verificados. Limitação: histórico mantém o resumo integral do encerramento, sem aplicar filtros ao snapshot.
 
-- [ ] **Tarefa 15 — Revisar responsividade e acessibilidade dos fluxos**
+- [x] **Tarefa 15 — Revisar responsividade e acessibilidade dos fluxos**
   - Capacidades: CAP-9. Dependências: 14.
   - Ajustar formulários, cartões, navegação, feedback e eventuais diálogos em todos os fluxos implementados.
   - Aceite: todas as ações principais funcionam por teclado; campos têm rótulos; erros são associados aos campos; diálogos devolvem foco ao fechar; cores não são o único indicador de estado; conteúdo não se sobrepõe em 360 px nem com zoom de 200%.
   - Verificação: percorrer criação de tarefa e mudança de estado sem mouse; testar telas estreita e desktop, zoom e mensagens de erro.
+  - Verificação realizada: Edge 154.0.4258.37 via Playwright, perfil isolado; criação de projeto/tarefa com Enter/Tab, mudança de estado com setas e manutenção do foco, erro de título e período com associação ao campo, detalhes do quadro em diálogo, Escape/Salvar com retorno de foco e atualização do cartão aprovados. As três telas e o diálogo não apresentaram transbordamento horizontal em 360/1280 px e ampliação CSS de 200%, inclusive com título de 150 caracteres sem espaços. Corrigido também o seletor do backlog desatualizado após criar sprint. Limitações: ampliação testada por CSS, não pelo menu de zoom do navegador; sem leitor de tela ou validação em outros navegadores.
 
-- [ ] **Tarefa 16 — Validar o ciclo completo e corrigir falhas de integração**
+- [x] **Tarefa 16 — Validar o ciclo completo e corrigir falhas de integração**
   - Capacidades: CAP-1 a CAP-9. Dependências: 15.
   - Executar o sinal de sucesso da especificação, corrigindo somente defeitos necessários para os critérios já definidos.
   - Aceite: completar projeto → backlog → sprint → Kanban → encerramento → histórico → nova sprint; dados corretos após recarga; nenhuma referência órfã; falhas de armazenamento não causam perda silenciosa; console sem erros no percurso.
   - Verificação: executar o fluxo com dois projetos, tarefas concluídas e pendentes; repetir carga vazia, dados inválidos e falha de gravação; registrar aqui navegador, resultado e limitações observadas.
+  - Verificação realizada: Playwright com Edge 154.0.4258.37 headless, em perfil isolado; fluxo pela interface projeto → backlog → sprint → quadro → encerramento → histórico → nova sprint, com dois projetos e recargas, aprovado. Testadas sprints mista, vazia e totalmente concluída; cancelamento de encerramento/exclusão; retorno de foco das confirmações e do resumo; preservação do snapshot após editar/excluir pendência; vínculo das concluídas e retorno de pendentes em andamento ao fim do backlog. Validadas referências, uma sprint ativa por projeto, bloqueios de alterações no histórico e isolamento de formulários. Falhas simuladas de leitura/gravação, alteração externa, JSON inválido, referência órfã e resumo inconsistente foram recusadas sem sobrescrita silenciosa; falha ao mover restaura o seletor e falha no diálogo preserva rascunho e exibe alerta. Nenhum erro de página/console no percurso; sintaxe JavaScript e diff aprovados. Limitações: armazenamento e falhas exercitados em perfil de teste, sem dados pessoais; somente Edge, com as limitações de acessibilidade/zoom registradas na tarefa 15.
 
 ## Conferência do planejamento
 
 - Todas as nove capacidades estão vinculadas a tarefas com critérios verificáveis.
-- Dependências apontam somente para tarefas anteriores; tarefas 1, 2 e 3 concluídas. Tarefas 4–16 permanecem pendentes.
-- Persistência com localStorage e R1 confirmadas pelo usuário em 18/09/2026. As demais regras propostas aguardam confirmação antes das tarefas afetadas.
+- Dependências apontam somente para tarefas anteriores; tarefas 1–16 concluídas, com verificações e limitações registradas em cada entrega.
+- Persistência com localStorage e R1 confirmadas pelo usuário em 18/09/2026. As tarefas 14–16 foram autorizadas nesta sessão e executadas conforme os critérios acima, preservando as regras do ciclo existente.
